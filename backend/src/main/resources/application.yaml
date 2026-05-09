@@ -1,0 +1,28 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: epos
+  profiles:
+    active:
+    - dev
+
+app:
+  jwt:
+    secret-key: EPOS_MANAGEMENT_SYSTEM_SECRET_KEY_1234567890_!@#$%^&*()_+
+    expiration: 86400000
+
+---
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/epos_db
+    username: epos
+    password: epos123
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
