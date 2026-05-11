@@ -6,6 +6,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.epos.backend.annotation.AuditLog;
+import com.epos.backend.enums.AuditAction;
+import com.epos.backend.enums.AuditType;
 import com.epos.backend.model.dto.request.LoginRequest;
 import com.epos.backend.model.dto.request.RegisterRequest;
 import com.epos.backend.model.dto.response.AuthResponse;
@@ -22,6 +25,12 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @AuditLog(
+        type = AuditType.AUTH,
+        action = AuditAction.CREATE,
+        saveRequest = true,
+        saveResponse = true
+    )
     @PostMapping(value = "/register")
     public ResponseData<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseData.<AuthResponse>builder()
@@ -32,6 +41,12 @@ public class AuthController {
                 .build();
     }
 
+    @AuditLog(
+        type = AuditType.AUTH,
+        action = AuditAction.LOGIN,
+        saveRequest = true,
+        saveResponse = true
+    )
     @PostMapping(value = "/login")
     public ResponseData<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseData.<AuthResponse>builder()

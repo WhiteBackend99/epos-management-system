@@ -4,6 +4,6 @@ public interface JwtService {
 
     public String generateToken(String username);
     public String extractUsername(String token);
-    public Boolean isTokenValid(String token, String username);
+    public Boolean isTokenValid(String token);
 
 }

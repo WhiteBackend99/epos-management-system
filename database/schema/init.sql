@@ -71,3 +71,20 @@ create table trn_stock_movement (
     updated_by varchar(60) default null,
     updated_at timestamp default null
 );
+
+create table audit_trail (
+    id bigserial PRIMARY KEY,
+    references_id bigint default null,
+    audit_type varchar(100) not null,
+    action varchar(50),
+    endpoint varchar(255),
+    http_method varchar(20),
+    request_payload jsonb,
+    response_payload jsonb,
+    error_payload jsonb,
+    ip_address varchar(100),
+    user_agent text,
+    status bigint,
+    created_by varchar(100),
+    created_at timestamp default current_timestamp
+);

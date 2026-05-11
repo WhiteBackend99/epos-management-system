@@ -24,10 +24,6 @@ public class JwtServiceImpl implements JwtService {
     private Long expiration;
 
     /* -------------------------------- FUNCTION PRIVATE -------------------------------------- */
-    private Boolean isTokenExpired(String token) {
-        return extractClaims(token).getExpiration().before(new Date());
-    }
-
     private Claims extractClaims(String token) {
         SecretKey signingKey = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
 
@@ -58,8 +54,13 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public Boolean isTokenValid(String token, String username) {
-        return extractUsername(token).equals(username) && !isTokenExpired(token);
+    public Boolean isTokenValid(String token) {
+        try {
+            Claims claims = extractClaims(token);
+            return claims.getSubject() != null && claims.getExpiration().after(new Date());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
 }
