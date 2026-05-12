@@ -197,7 +197,7 @@ public class AuditLogAspect {
             Map<String, Object> response = auditLog.saveResponse() ? convertObjectToMap(proceed) : null;
 
             auditTrailService.saveAuditAsync(referenceId, auditLog.type().name(), auditLog.action().name(), endpoint, httpMethod, ipAddress, userAgent, request, response, null, Long.valueOf(HttpStatus.OK.value()), createdBy);
-            return response;
+            return proceed;
         } catch (Exception e) {
             Map<String, Object> error = new LinkedHashMap<>();
             error.put("error", e.getClass().getSimpleName());
