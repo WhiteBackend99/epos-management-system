@@ -20,7 +20,7 @@ public class TrxStockInRequest {
     @Min(value = 1, message = "Kuantiti minimal harus 1")
     private Long qty;
     
-    private String referenceNo;
+    private String externalReferenceNo;
     private String notes;
 
 }

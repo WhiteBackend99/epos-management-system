@@ -52,6 +52,9 @@ public class TrxStockMovement {
     @Column(name = "reference_no", length = 100)
     private String referenceNo;
 
+    @Column(name = "external_reference_no", length = 100)
+    private String externalReferenceNo;
+
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

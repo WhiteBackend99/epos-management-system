@@ -20,7 +20,7 @@ public class TrxStockAdjustmentRequest {
     @Min(value = 0, message = "Stok baru tidak boleh dibawah 0")
     private Long newStock;
     
-    private String referenceNo;
+    private String externalReferenceNo;
     private String notes;
     
 }

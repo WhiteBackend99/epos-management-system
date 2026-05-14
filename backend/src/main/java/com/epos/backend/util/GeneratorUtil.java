@@ -7,11 +7,32 @@ import java.util.concurrent.atomic.AtomicLong;
 public class GeneratorUtil {
 
     private static final AtomicLong COUNTER = new AtomicLong(1);
+    private static final AtomicLong COUNTER_STOCK_IN = new AtomicLong(1);
+    private static final AtomicLong COUNTER_STOCK_OUT = new AtomicLong(1);
+    private static final AtomicLong COUNTER_STOCK_ADJ = new AtomicLong(1);
 
     public static String generateSku() {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         long sequence = COUNTER.getAndIncrement();
         return String.format("PRD-%s-%04d", date, sequence);
+    }
+
+    public static String generateReferenceNoStockIn() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long sequence = COUNTER_STOCK_IN.getAndIncrement();
+        return String.format("STI-%s-%06d", date, sequence);
+    }
+
+    public static String generateReferenceNoStockOut() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long sequence = COUNTER_STOCK_OUT.getAndIncrement();
+        return String.format("STO-%s-%06d", date, sequence);
+    }
+
+    public static String generateReferenceNoStockAdjustment() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long sequence = COUNTER_STOCK_ADJ.getAndIncrement();
+        return String.format("STA-%s-%06d", date, sequence);
     }
 
 }

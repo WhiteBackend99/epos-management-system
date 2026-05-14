@@ -19,6 +19,7 @@ import com.epos.backend.repository.ProductRepository;
 import com.epos.backend.repository.TrxStockMovementRepository;
 import com.epos.backend.service.TrxStockMovementService;
 import com.epos.backend.specification.TrxStockMovementSpecification;
+import com.epos.backend.util.GeneratorUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -55,14 +56,15 @@ public class TrxStockMovementServiceImpl extends Services implements TrxStockMov
         return dataProduct;
     }
 
-    private TrxStockMovement sectionSaveDataStockMovement(Product dataProduct, StockMovementType movementType, Long qtyBefore, Long qtyChange, Long qtyAfter, String reference, String notes) {
+    private TrxStockMovement sectionSaveDataStockMovement(Product dataProduct, StockMovementType movementType, Long qtyBefore, Long qtyChange, Long qtyAfter, String referenceNo, String externalReferenceNo, String notes) {
         TrxStockMovement data = TrxStockMovement.builder()
                                     .product(dataProduct)
                                     .movementType(movementType)
                                     .qtyBefore(qtyBefore)
                                     .qtyChange(qtyChange)
                                     .qtyAfter(qtyAfter)
-                                    .referenceNo(reference)
+                                    .referenceNo(referenceNo)
+                                    .externalReferenceNo(externalReferenceNo)
                                     .notes(notes)
                                     .createdAt(now())
                                     .createdBy(getCurrentUsername())
@@ -81,13 +83,14 @@ public class TrxStockMovementServiceImpl extends Services implements TrxStockMov
         Long qtyBefore = normalizeStock(dataProduct.getStock().longValue());
         Long qtyChange = request.getQty();
         Long qtyAfter = qtyBefore + qtyChange;
+        String referenceNo = GeneratorUtil.generateReferenceNoStockIn();
 
         dataProduct.setStock(qtyAfter);
         dataProduct.setUpdatedBy(getCurrentUsername());
         dataProduct.setUpdatedAt(now());
         productRepository.save(dataProduct);
 
-        TrxStockMovement dataStockMovement = sectionSaveDataStockMovement(dataProduct, StockMovementType.IN, qtyBefore, qtyChange, qtyAfter, request.getReferenceNo(), request.getNotes());
+        TrxStockMovement dataStockMovement = sectionSaveDataStockMovement(dataProduct, StockMovementType.IN, qtyBefore, qtyChange, qtyAfter, referenceNo, request.getExternalReferenceNo(), request.getNotes());
         return buildEntityToResponse(dataStockMovement);
     }
 
@@ -103,13 +106,14 @@ public class TrxStockMovementServiceImpl extends Services implements TrxStockMov
         }
 
         Long qtyAfter = qtyBefore - qtyChange;
+        String referenceNo = GeneratorUtil.generateReferenceNoStockOut();
 
         dataProduct.setStock(qtyAfter);
         dataProduct.setUpdatedBy(getCurrentUsername());
         dataProduct.setUpdatedAt(now());
         productRepository.save(dataProduct);
 
-        TrxStockMovement dataStockMovement = sectionSaveDataStockMovement(dataProduct, StockMovementType.OUT, qtyBefore, qtyChange * -1, qtyAfter, request.getReferenceNo(), request.getNotes());
+        TrxStockMovement dataStockMovement = sectionSaveDataStockMovement(dataProduct, StockMovementType.OUT, qtyBefore, qtyChange * -1, qtyAfter, referenceNo, request.getExternalReferenceNo(), request.getNotes());
         return buildEntityToResponse(dataStockMovement);
     }
 
@@ -120,13 +124,14 @@ public class TrxStockMovementServiceImpl extends Services implements TrxStockMov
         Long qtyBefore = normalizeStock(dataProduct.getStock().longValue());
         Long qtyAfter = request.getNewStock();
         Long qtyChange = qtyAfter - qtyBefore;
+        String referenceNo = GeneratorUtil.generateReferenceNoStockAdjustment();
 
         dataProduct.setStock(qtyAfter);
         dataProduct.setUpdatedBy(getCurrentUsername());
         dataProduct.setUpdatedAt(now());
         productRepository.save(dataProduct);
 
-        TrxStockMovement dataStockMovement = sectionSaveDataStockMovement(dataProduct, StockMovementType.ADJUSTMENT, qtyBefore, qtyChange, qtyAfter, request.getReferenceNo(), request.getNotes());
+        TrxStockMovement dataStockMovement = sectionSaveDataStockMovement(dataProduct, StockMovementType.ADJUSTMENT, qtyBefore, qtyChange, qtyAfter, referenceNo, request.getExternalReferenceNo(), request.getNotes());
         return buildEntityToResponse(dataStockMovement);
     }
 
