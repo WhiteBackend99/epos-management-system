@@ -23,8 +23,8 @@ public class ProductResponse {
     private String description;
     private BigDecimal purchasePrice;
     private BigDecimal sellingPrice;
-    private Integer stock;
-    private Integer minStock;
+    private Long stock;
+    private Long minStock;
     private Boolean isActive;
     private Timestamp createdAt;
     private String createdBy;

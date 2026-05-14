@@ -39,11 +39,11 @@ public class ProductRequest {
 
     @NotNull(message = "Stok wajib diisi")
     @Min(value = 0)
-    private Integer stock;
+    private Long stock;
 
     @NotNull(message = "Minimum Stok wajib diisi")
     @Min(value = 0)
-    private Integer minStock;
+    private Long minStock;
     
     private Boolean isActive;
 

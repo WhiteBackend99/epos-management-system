@@ -54,10 +54,10 @@ public class Product extends BaseEntity {
     private BigDecimal sellingPrice;
 
     @Column(name = "stock")
-    private Integer stock;
+    private Long stock;
 
     @Column(name = "min_stock")
-    private Integer minStock;
+    private Long minStock;
 
     @Column(name = "is_active")
     private Boolean isActive;
