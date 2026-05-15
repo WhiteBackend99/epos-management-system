@@ -35,4 +35,8 @@ public class GeneratorUtil {
         return String.format("STA-%s-%06d", date, sequence);
     }
 
+    public static String generateSupplierCode(Long sequence) {
+        return String.format("SUP-%06d", sequence);
+    }
+
 }
