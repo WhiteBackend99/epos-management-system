@@ -22,10 +22,10 @@ public abstract class BaseEntity {
     @Column(name = "created_by", nullable = false, updatable = false)
     private String createdBy;
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", nullable = true)
     private Timestamp updatedAt;
     
-    @Column(name = "updated_by")
+    @Column(name = "updated_by", nullable = true)
     private String updatedBy;
 
 }

@@ -10,6 +10,7 @@ public class GeneratorUtil {
     private static final AtomicLong COUNTER_STOCK_IN = new AtomicLong(1);
     private static final AtomicLong COUNTER_STOCK_OUT = new AtomicLong(1);
     private static final AtomicLong COUNTER_STOCK_ADJ = new AtomicLong(1);
+    private static final AtomicLong COUNTER_STOCK_PURCHASE = new AtomicLong(1);
 
     public static String generateSku() {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -37,6 +38,22 @@ public class GeneratorUtil {
 
     public static String generateSupplierCode(Long sequence) {
         return String.format("SUP-%06d", sequence);
+    }
+
+    public static String generatePurchaseNo(Long sequence) {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return String.format("PUR-%s-%06d", date, sequence);
+    }
+
+    public static String generateInvoiceNo(Long sequence) {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return String.format("PINV-%s-%06d", date, sequence);
+    }
+
+    public static String generateStockPurchaseReferenceNo() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        long sequence = COUNTER_STOCK_PURCHASE.getAndIncrement();
+        return String.format("STP-%s-%06d", date, sequence);
     }
 
 }

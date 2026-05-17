@@ -1,5 +1,7 @@
 package com.epos.backend.util;
 
+import java.math.BigDecimal;
+
 public class ParseUtil {
 
     public static boolean hasText(String value) {
@@ -12,6 +14,10 @@ public class ParseUtil {
 
     public static String toLowerTrim(String value) {
         return hasText(value) ? value.trim().toLowerCase() : null;
+    }
+
+    public static BigDecimal defaultAmount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
 }

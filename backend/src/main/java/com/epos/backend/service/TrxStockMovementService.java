@@ -14,4 +14,7 @@ public interface TrxStockMovementService {
     public TrxStockMovementResponse adjustment(TrxStockAdjustmentRequest request);
     public TrxStockMovementResponse getDataById(Long id);
     public Page<TrxStockMovementResponse> searchData(int page, int size, String search);
+
+    /*------------------------------------ PURCHASE ------------------------------------------- */
+    public TrxStockMovementResponse purchaseStockIn(Long productId, Long qty, String externalReferenceNo, String notes);
 }

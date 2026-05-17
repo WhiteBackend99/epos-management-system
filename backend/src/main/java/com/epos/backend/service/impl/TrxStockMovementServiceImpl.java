@@ -148,4 +148,21 @@ public class TrxStockMovementServiceImpl extends Services implements TrxStockMov
         return trxStockMovementRepository.findAll(specification, pageable).map(this::buildEntityToResponse);
     }
 
+    @Transactional
+    @Override
+    public TrxStockMovementResponse purchaseStockIn(Long productId, Long qty, String externalReferenceNo, String notes) {
+        Product dataProduct = sectionGetDataProductForUpdate(productId);
+        Long qtyBefore = normalizeStock(dataProduct.getStock());
+        Long qtyChange = qty;
+        Long qtyAfter = qtyBefore + qtyChange;
+
+        dataProduct.setStock(qtyAfter);
+        dataProduct.setUpdatedBy(getCurrentUsername());
+        dataProduct.setUpdatedAt(now());
+        productRepository.save(dataProduct);
+
+        TrxStockMovement newData = sectionSaveDataStockMovement(dataProduct, StockMovementType.PURCHASE, qtyBefore, qtyChange, qtyAfter, GeneratorUtil.generateStockPurchaseReferenceNo(), externalReferenceNo, notes);
+        return buildEntityToResponse(newData);
+    }
+
 }
