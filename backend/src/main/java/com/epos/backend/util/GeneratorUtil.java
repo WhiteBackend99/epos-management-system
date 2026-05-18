@@ -2,6 +2,7 @@ package com.epos.backend.util;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class GeneratorUtil {
@@ -54,6 +55,12 @@ public class GeneratorUtil {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         long sequence = COUNTER_STOCK_PURCHASE.getAndIncrement();
         return String.format("STP-%s-%06d", date, sequence);
+    }
+
+    public static String generateSalesNo() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return String.format("SALE-%s-%s", date, random);
     }
 
 }
