@@ -1,6 +1,6 @@
 package com.epos.backend.enums;
 
-public enum PaymentMethod {
+public enum RefundMethod {
 
     CASH, QRIS, TRANSFER, DEBIT
 

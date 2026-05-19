@@ -63,4 +63,10 @@ public class GeneratorUtil {
         return String.format("SALE-%s-%s", date, random);
     }
 
+    public static String generateReturnNo() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return String.format("RET-%s-%s", date, random);
+    }
+
 }
