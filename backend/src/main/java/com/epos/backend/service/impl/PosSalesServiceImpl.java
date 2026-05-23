@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.epos.backend.enums.CashierShiftStatus;
 import com.epos.backend.enums.PaymentStatus;
 import com.epos.backend.enums.SalesStatus;
 import com.epos.backend.enums.StockMovementType;
@@ -21,11 +22,13 @@ import com.epos.backend.model.dto.response.PosSalesResponse;
 import com.epos.backend.model.dto.response.PosSalesResponse.PosSalesDetailResponse;
 import com.epos.backend.model.dto.response.PosSalesResponse.PosSalesPaymentResponse;
 import com.epos.backend.model.entity.Product;
+import com.epos.backend.model.entity.TrxCashierShift;
 import com.epos.backend.model.entity.TrxSales;
 import com.epos.backend.model.entity.TrxSalesDetail;
 import com.epos.backend.model.entity.TrxSalesPayment;
 import com.epos.backend.model.entity.TrxStockMovement;
 import com.epos.backend.repository.ProductRepository;
+import com.epos.backend.repository.TrxCashierShiftRepository;
 import com.epos.backend.repository.TrxSalesRepository;
 import com.epos.backend.repository.TrxStockMovementRepository;
 import com.epos.backend.service.PosSalesService;
@@ -42,6 +45,7 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     
     private final TrxSalesRepository trxSalesRepository;
     private final TrxStockMovementRepository trxStockMovementRepository;
+    private final TrxCashierShiftRepository trxCashierShiftRepository;
     private final ProductRepository productRepository;
 
     private PosSalesResponse buildEntityToResponse(TrxSales data) {
@@ -123,6 +127,9 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     @Transactional
     @Override
     public PosSalesResponse createSales(PosSalesRequest request) {
+        TrxCashierShift dataCashierShift = trxCashierShiftRepository
+            .findFirstByCashierUsernameAndStatusOrderByOpenedAtDesc(getCurrentUsername(), CashierShiftStatus.OPEN).orElseThrow(() -> new IllegalArgumentException("Kasir belum membuka shift"));
+        
         validationRequest(request);
 
         String salesNo = GeneratorUtil.generateSalesNo();
@@ -141,6 +148,7 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
             .status(SalesStatus.SUCCESS)
             .createdBy(getCurrentUsername())
             .createdAt(now())
+            .cashierShift(dataCashierShift)
             .details(new ArrayList<>())
             .payments(new ArrayList<>())
             .build();

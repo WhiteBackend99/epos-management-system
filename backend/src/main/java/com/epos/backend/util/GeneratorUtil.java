@@ -69,4 +69,10 @@ public class GeneratorUtil {
         return String.format("RET-%s-%s", date, random);
     }
 
+    public static String generateShiftNo() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return String.format("SHIFT-%s-%s", date, random);
+    }
+
 }

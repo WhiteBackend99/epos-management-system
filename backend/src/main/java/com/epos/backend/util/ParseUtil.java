@@ -20,4 +20,8 @@ public class ParseUtil {
         return value == null ? BigDecimal.ZERO : value;
     }
 
+    public static Long defaultLong(Long value) {
+        return value == null ? 0L : value;
+    }
+
 }

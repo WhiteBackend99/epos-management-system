@@ -89,6 +89,10 @@ public class TrxSalesReturn {
     @Column(name = "cancel_reason")
     private String cancelReason;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cashier_shift_id")
+    private TrxCashierShift cashierShift;;
+
     @OneToMany(mappedBy = "salesReturn", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TrxSalesReturnDetail> details;
 

@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.epos.backend.enums.CashierShiftStatus;
 import com.epos.backend.enums.RefundStatus;
 import com.epos.backend.enums.SalesReturnStatus;
 import com.epos.backend.enums.SalesStatus;
@@ -22,6 +23,7 @@ import com.epos.backend.model.dto.response.TrxSalesReturnResponse;
 import com.epos.backend.model.dto.response.TrxSalesReturnResponse.TrxSalesReturnDetailResponse;
 import com.epos.backend.model.dto.response.TrxSalesReturnResponse.TrxSalesReturnRefundPaymentResponse;
 import com.epos.backend.model.entity.Product;
+import com.epos.backend.model.entity.TrxCashierShift;
 import com.epos.backend.model.entity.TrxSales;
 import com.epos.backend.model.entity.TrxSalesDetail;
 import com.epos.backend.model.entity.TrxSalesRefundPayment;
@@ -29,6 +31,7 @@ import com.epos.backend.model.entity.TrxSalesReturn;
 import com.epos.backend.model.entity.TrxSalesReturnDetail;
 import com.epos.backend.model.entity.TrxStockMovement;
 import com.epos.backend.repository.ProductRepository;
+import com.epos.backend.repository.TrxCashierShiftRepository;
 import com.epos.backend.repository.TrxSalesDetailRepository;
 import com.epos.backend.repository.TrxSalesRepository;
 import com.epos.backend.repository.TrxSalesReturnDetailRepository;
@@ -50,6 +53,7 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
     private final TrxSalesReturnRepository trxSalesReturnRepository;
     private final TrxSalesReturnDetailRepository trxSalesReturnDetailRepository;
     private final TrxStockMovementRepository trxStockMovementRepository;
+    private final TrxCashierShiftRepository trxCashierShiftRepository;
     private final ProductRepository productRepository;
 
     private TrxSalesReturnResponse buildEntityToResponse(TrxSalesReturn data) {
@@ -137,6 +141,9 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
     @Transactional
     @Override
     public TrxSalesReturnResponse createReturn(TrxSalesReturnRequest request) {
+        TrxCashierShift dataCashierShift = trxCashierShiftRepository
+            .findFirstByCashierUsernameAndStatusOrderByOpenedAtDesc(getCurrentUsername(), CashierShiftStatus.OPEN).orElseThrow(() -> new IllegalArgumentException("Kasir belum membuka shift"));
+
         validationRequest(request);
         TrxSales dataSales = trxSalesRepository.findById(request.getSalesId()).orElseThrow(() -> new EntityNotFoundException("Transaksi Penjualan tidak ditemukan"));
         validationSalesCanBeReturned(dataSales);
@@ -153,6 +160,7 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
             .returnReason(request.getReturnReason())
             .createdBy(getCurrentUsername())
             .createdAt(now())
+            .cashierShift(dataCashierShift)
             .details(new ArrayList<>())
             .refundPayments(new ArrayList<>())
             .build();
