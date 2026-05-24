@@ -16,6 +16,9 @@ public class ParseUtil {
         return hasText(value) ? value.trim().toLowerCase() : null;
     }
 
+    public static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
     public static BigDecimal defaultAmount(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
