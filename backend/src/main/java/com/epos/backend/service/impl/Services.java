@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 
 import com.epos.backend.security.CurrentUserService;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @Service
 public abstract class Services {
 
@@ -18,6 +20,14 @@ public abstract class Services {
     /* -------------------------------- FUNCTION PROTECTED -------------------------------------- */
     protected String getCurrentUsername() {
         return currentUserService.getUsername();
+    }
+
+    protected String getClientIp(HttpServletRequest servletRequest) {
+        String forwarded = servletRequest.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0];
+        }
+        return servletRequest.getRemoteAddr();
     }
 
     protected Timestamp now() {
