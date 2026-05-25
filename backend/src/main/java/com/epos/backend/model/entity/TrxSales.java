@@ -80,6 +80,9 @@ public class TrxSales {
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
     private String cancelReason;
 
+    @Column(name = "promo_discount_amount", nullable = false)
+    private BigDecimal promoDiscountAmount;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cashier_shift_id")
     private TrxCashierShift cashierShift;;

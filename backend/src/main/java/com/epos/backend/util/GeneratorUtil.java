@@ -81,4 +81,10 @@ public class GeneratorUtil {
         return String.format("RCPT-%s-%s", date, random);
     }
 
+    public static String generatePromoNo() {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        return String.format("PRM-%s-%s", date, random);
+    }
+
 }

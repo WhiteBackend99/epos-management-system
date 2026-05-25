@@ -3,6 +3,7 @@ package com.epos.backend.util;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 
 public class ParseUtil {
 
@@ -29,9 +30,19 @@ public class ParseUtil {
     public static BigDecimal defaultAmount(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
+
+    public static BigDecimal getBigDecimal(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return new BigDecimal(String.valueOf(value));
+    }
     
     public static Long defaultLong(Long value) {
         return value == null ? 0L : value;
+    }
+
+    public static Long getLong(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        return Long.valueOf(String.valueOf(value));
     }
 
 }

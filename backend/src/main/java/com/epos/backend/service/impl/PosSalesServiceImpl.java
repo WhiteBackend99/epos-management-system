@@ -15,6 +15,9 @@ import com.epos.backend.enums.CashierShiftStatus;
 import com.epos.backend.enums.PaymentStatus;
 import com.epos.backend.enums.SalesStatus;
 import com.epos.backend.enums.StockMovementType;
+import com.epos.backend.model.dto.AppliedPromoResult;
+import com.epos.backend.model.dto.PromoCalculationContext;
+import com.epos.backend.model.dto.PromoCalculationContext.PromoCalculationItem;
 import com.epos.backend.model.dto.request.PosSalesCancelRequest;
 import com.epos.backend.model.dto.request.PosSalesRequest;
 import com.epos.backend.model.dto.request.PosSalesRequest.PosSalesItemRequest;
@@ -22,16 +25,21 @@ import com.epos.backend.model.dto.response.PosSalesResponse;
 import com.epos.backend.model.dto.response.PosSalesResponse.PosSalesDetailResponse;
 import com.epos.backend.model.dto.response.PosSalesResponse.PosSalesPaymentResponse;
 import com.epos.backend.model.entity.Product;
+import com.epos.backend.model.entity.Promo;
 import com.epos.backend.model.entity.TrxCashierShift;
 import com.epos.backend.model.entity.TrxSales;
 import com.epos.backend.model.entity.TrxSalesDetail;
 import com.epos.backend.model.entity.TrxSalesPayment;
+import com.epos.backend.model.entity.TrxSalesPromo;
 import com.epos.backend.model.entity.TrxStockMovement;
 import com.epos.backend.repository.ProductRepository;
+import com.epos.backend.repository.PromoRepository;
 import com.epos.backend.repository.TrxCashierShiftRepository;
+import com.epos.backend.repository.TrxSalesPromoRepository;
 import com.epos.backend.repository.TrxSalesRepository;
 import com.epos.backend.repository.TrxStockMovementRepository;
 import com.epos.backend.service.PosSalesService;
+import com.epos.backend.service.PromoEngineService;
 import com.epos.backend.util.FunctionUtil;
 import com.epos.backend.util.GeneratorUtil;
 import com.epos.backend.util.ParseUtil;
@@ -46,7 +54,10 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     private final TrxSalesRepository trxSalesRepository;
     private final TrxStockMovementRepository trxStockMovementRepository;
     private final TrxCashierShiftRepository trxCashierShiftRepository;
+    private final TrxSalesPromoRepository trxSalesPromoRepository;
     private final ProductRepository productRepository;
+    private final PromoRepository promoRepository;
+    private final PromoEngineService promoEngineService;
 
     private PosSalesResponse buildEntityToResponse(TrxSales data) {
         List<PosSalesDetailResponse> details = data.getDetails().stream()
@@ -198,9 +209,35 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
             trxStockMovementRepository.save(newDataStockMovement);
         }
 
-        BigDecimal discount = ParseUtil.defaultAmount(request.getDiscountAmount());
+        /* SECTION CALCULATION PROMO*/
+        PromoCalculationContext promoContext = PromoCalculationContext.builder()
+                .subtotal(subtotal)
+                .paymentMethod(request.getPayments().get(0).getPaymentMethod())
+                .promoCode(request.getPromoCode())
+                .customerName(request.getCustomerName())
+                .items(newData.getDetails().stream()
+                        .map(detail -> PromoCalculationItem.builder()
+                                .productId(detail.getProduct().getId())
+                                .categoryId(detail.getProduct().getCategory().getId())
+                                .qty(detail.getQty())
+                                .price(detail.getPriceSnapshot())
+                                .subtotal(detail.getSubtotal())
+                                .build())
+                        .toList())
+                .build();
+
+        AppliedPromoResult promoResult;
+        if (request.getPromoCode() != null && !request.getPromoCode().isBlank()) {
+            promoResult = promoEngineService.calculateManualCodePromo(promoContext, request.getPromoCode());
+        } else {
+            promoResult = promoEngineService.calculateBestPromo(promoContext);
+        }
+
+        BigDecimal promoDiscount = promoResult.getDiscountAmount();
+        BigDecimal manualDiscount = ParseUtil.defaultAmount(request.getDiscountAmount());
+        BigDecimal totalDiscount = manualDiscount.add(promoDiscount);
         BigDecimal tax = ParseUtil.defaultAmount(request.getTaxAmount());
-        BigDecimal grandTotal = subtotal.subtract(discount).add(tax);
+        BigDecimal grandTotal = subtotal.subtract(totalDiscount).add(tax);
 
         validationGrandTotal(grandTotal);
         
@@ -222,7 +259,8 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
             .toList();
         
         newData.setSubtotal(subtotal);
-        newData.setDiscountAmount(discount);
+        newData.setPromoDiscountAmount(promoDiscount);
+        newData.setDiscountAmount(totalDiscount);
         newData.setTaxAmount(tax);
         newData.setGrandTotal(grandTotal);
         newData.setPaidAmount(paidAmount);
@@ -231,6 +269,29 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
         newData.setPayments(payments);
 
         TrxSales dataSales = trxSalesRepository.save(newData);
+
+        if (Boolean.TRUE.equals(promoResult.getApplied())) {
+            TrxSalesPromo newDataSalesPromo = TrxSalesPromo.builder()
+                .salesId(newData.getId())
+                .salesNo(newData.getSalesNo())
+                .promoId(promoResult.getPromoId())
+                .promoNo(promoResult.getPromoNo())
+                .promoName(promoResult.getPromoName())
+                .promoCode(promoResult.getPromoCode())
+                .discountAmount(promoResult.getDiscountAmount())
+                .promoSnapshot(promoResult.getPromoSnapshot())
+                .createdBy(getCurrentUsername())
+                .createdAt(now())
+                .build();
+            trxSalesPromoRepository.save(newDataSalesPromo);
+
+            Promo dataPromo = promoRepository.findByIdForUpdate(promoResult.getPromoId()).orElseThrow();
+            dataPromo.setCurrentUsage(dataPromo.getCurrentUsage() + 1);
+            dataPromo.setUpdatedBy(getCurrentUsername());
+            dataPromo.setUpdatedAt(now());
+            promoRepository.save(dataPromo);
+        }
+
         return buildEntityToResponse(dataSales);
     }
 

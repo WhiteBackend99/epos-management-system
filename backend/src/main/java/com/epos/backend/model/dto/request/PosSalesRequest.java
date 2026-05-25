@@ -17,6 +17,7 @@ import lombok.Data;
 public class PosSalesRequest {
 
     private String customerName;
+    private String promoCode;
     private BigDecimal discountAmount;
     private BigDecimal taxAmount;
 
