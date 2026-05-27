@@ -1,4 +1,4 @@
-package com.epos.backend.model.dto;
+package com.epos.backend.model.dto.context;
 
 import java.math.BigDecimal;
 import java.util.List;

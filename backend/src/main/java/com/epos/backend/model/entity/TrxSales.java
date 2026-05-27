@@ -3,6 +3,10 @@ package com.epos.backend.model.entity;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Map;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import com.epos.backend.enums.SalesStatus;
 
@@ -82,6 +86,32 @@ public class TrxSales {
 
     @Column(name = "promo_discount_amount", nullable = false)
     private BigDecimal promoDiscountAmount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_member_id")
+    private CustomerMember customerMember;
+
+    @Column(name = "member_code_snapshot")
+    private String memberCodeSnapshot;
+
+    @Column(name = "member_name_snapshot")
+    private String memberNameSnapshot;
+
+    @Column(name = "point_earned", nullable = false)
+    private Long pointEarned = 0l;
+
+    @Column(name = "point_redeemed", nullable = false)
+    private Long pointRedeemed = 0l;
+
+    @Column(name = "point_discount_amount", nullable = false)
+    private BigDecimal pointDiscountAmount = BigDecimal.ZERO;
+
+    @Column(name = "loyalty_processed_flag", nullable = false)
+    private Boolean loyaltyProcessedFlag = false;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "loyalty_formula_snapshot", columnDefinition = "jsonb")
+    private Map<String, Object> loyaltyFormulaSnapshot;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cashier_shift_id")

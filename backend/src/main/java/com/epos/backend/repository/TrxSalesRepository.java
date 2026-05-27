@@ -5,10 +5,14 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.epos.backend.model.entity.TrxSales;
 import com.epos.backend.model.projection.CashierShiftSummaryProjection;
+
+import jakarta.persistence.LockModeType;
 
 public interface TrxSalesRepository extends JpaRepository<TrxSales, Long> {
 
@@ -28,4 +32,13 @@ public interface TrxSalesRepository extends JpaRepository<TrxSales, Long> {
                 AND ts.status = 'SUCCESS'
             """, nativeQuery = true)
     public CashierShiftSummaryProjection getSalesSummaryByShiftId(Long shiftId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT ts
+            FROM TrxSales ts
+            WHERE ts.salesNo = :salesNo
+            """)
+    public Optional<TrxSales> findBySalesNoForUpdate(@Param("salesNo") String salesNo);
+
 }

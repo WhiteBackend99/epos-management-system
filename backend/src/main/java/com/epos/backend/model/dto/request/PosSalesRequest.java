@@ -16,6 +16,7 @@ import lombok.Data;
 @Builder
 public class PosSalesRequest {
 
+    private Long customerMemberId;
     private String customerName;
     private String promoCode;
     private BigDecimal discountAmount;

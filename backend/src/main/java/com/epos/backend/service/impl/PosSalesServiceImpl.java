@@ -15,15 +15,16 @@ import com.epos.backend.enums.CashierShiftStatus;
 import com.epos.backend.enums.PaymentStatus;
 import com.epos.backend.enums.SalesStatus;
 import com.epos.backend.enums.StockMovementType;
-import com.epos.backend.model.dto.AppliedPromoResult;
-import com.epos.backend.model.dto.PromoCalculationContext;
-import com.epos.backend.model.dto.PromoCalculationContext.PromoCalculationItem;
+import com.epos.backend.model.dto.context.PromoCalculationContext;
+import com.epos.backend.model.dto.context.PromoCalculationContext.PromoCalculationItem;
 import com.epos.backend.model.dto.request.PosSalesCancelRequest;
 import com.epos.backend.model.dto.request.PosSalesRequest;
 import com.epos.backend.model.dto.request.PosSalesRequest.PosSalesItemRequest;
 import com.epos.backend.model.dto.response.PosSalesResponse;
 import com.epos.backend.model.dto.response.PosSalesResponse.PosSalesDetailResponse;
 import com.epos.backend.model.dto.response.PosSalesResponse.PosSalesPaymentResponse;
+import com.epos.backend.model.dto.result.AppliedPromoResult;
+import com.epos.backend.model.entity.CustomerMember;
 import com.epos.backend.model.entity.Product;
 import com.epos.backend.model.entity.Promo;
 import com.epos.backend.model.entity.TrxCashierShift;
@@ -32,6 +33,7 @@ import com.epos.backend.model.entity.TrxSalesDetail;
 import com.epos.backend.model.entity.TrxSalesPayment;
 import com.epos.backend.model.entity.TrxSalesPromo;
 import com.epos.backend.model.entity.TrxStockMovement;
+import com.epos.backend.repository.CustomerMemberRepository;
 import com.epos.backend.repository.ProductRepository;
 import com.epos.backend.repository.PromoRepository;
 import com.epos.backend.repository.TrxCashierShiftRepository;
@@ -40,6 +42,7 @@ import com.epos.backend.repository.TrxSalesRepository;
 import com.epos.backend.repository.TrxStockMovementRepository;
 import com.epos.backend.service.PosSalesService;
 import com.epos.backend.service.PromoEngineService;
+import com.epos.backend.service.TrxLoyaltyPointService;
 import com.epos.backend.util.FunctionUtil;
 import com.epos.backend.util.GeneratorUtil;
 import com.epos.backend.util.ParseUtil;
@@ -57,13 +60,13 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     private final TrxSalesPromoRepository trxSalesPromoRepository;
     private final ProductRepository productRepository;
     private final PromoRepository promoRepository;
+    private final CustomerMemberRepository customerMemberRepository;
     private final PromoEngineService promoEngineService;
+    private final TrxLoyaltyPointService trxLoyaltyPointService;
 
     private PosSalesResponse buildEntityToResponse(TrxSales data) {
-        List<PosSalesDetailResponse> details = data.getDetails().stream()
-            .map(dtl -> buildEntityToResponseDetail(dtl)).toList();
-        List<PosSalesPaymentResponse> payments = data.getPayments().stream()
-            .map(p -> buildEntityToResponsePayment(p)).toList();
+        List<PosSalesDetailResponse> details = data.getDetails().stream().map(dtl -> buildEntityToResponseDetail(dtl)).toList();
+        List<PosSalesPaymentResponse> payments = data.getPayments().stream().map(p -> buildEntityToResponsePayment(p)).toList();
         
         return PosSalesResponse.builder()
             .id(data.getId())
@@ -138,8 +141,7 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     @Transactional
     @Override
     public PosSalesResponse createSales(PosSalesRequest request) {
-        TrxCashierShift dataCashierShift = trxCashierShiftRepository
-            .findFirstByCashierUsernameAndStatusOrderByOpenedAtDesc(getCurrentUsername(), CashierShiftStatus.OPEN).orElseThrow(() -> new IllegalArgumentException("Kasir belum membuka shift"));
+        TrxCashierShift dataCashierShift = trxCashierShiftRepository.findFirstByCashierUsernameAndStatusOrderByOpenedAtDesc(getCurrentUsername(), CashierShiftStatus.OPEN).orElseThrow(() -> new IllegalArgumentException("Kasir belum membuka shift"));
         
         validationRequest(request);
 
@@ -160,9 +162,20 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
             .createdBy(getCurrentUsername())
             .createdAt(now())
             .cashierShift(dataCashierShift)
+            .pointEarned(0l)
+            .pointRedeemed(0l)
+            .pointDiscountAmount(BigDecimal.ZERO)
+            .loyaltyProcessedFlag(false)
             .details(new ArrayList<>())
             .payments(new ArrayList<>())
             .build();
+
+        if (request.getCustomerMemberId() != null) {
+            CustomerMember dataMember = customerMemberRepository.findById(request.getCustomerMemberId()).orElseThrow(() -> new RuntimeException("Member tidak ditemukan"));
+            newData.setCustomerMember(dataMember);
+            newData.setMemberCodeSnapshot(dataMember.getMemberCode());
+            newData.setMemberNameSnapshot(dataMember.getFullName());
+        }
 
         for (PosSalesItemRequest requestItem : request.getItems()) {
             Product dataProduct = productRepository.findById(requestItem.getProductId()).orElseThrow(() -> new EntityNotFoundException("Produk tidak ditemukan: " + requestItem.getProductId()));
@@ -211,20 +224,20 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
 
         /* SECTION CALCULATION PROMO*/
         PromoCalculationContext promoContext = PromoCalculationContext.builder()
-                .subtotal(subtotal)
-                .paymentMethod(request.getPayments().get(0).getPaymentMethod())
-                .promoCode(request.getPromoCode())
-                .customerName(request.getCustomerName())
-                .items(newData.getDetails().stream()
-                        .map(detail -> PromoCalculationItem.builder()
-                                .productId(detail.getProduct().getId())
-                                .categoryId(detail.getProduct().getCategory().getId())
-                                .qty(detail.getQty())
-                                .price(detail.getPriceSnapshot())
-                                .subtotal(detail.getSubtotal())
-                                .build())
-                        .toList())
-                .build();
+            .subtotal(subtotal)
+            .paymentMethod(request.getPayments().get(0).getPaymentMethod())
+            .promoCode(request.getPromoCode())
+            .customerName(request.getCustomerName())
+            .items(newData.getDetails().stream()
+                .map(detail -> PromoCalculationItem.builder()
+                        .productId(detail.getProduct().getId())
+                        .categoryId(detail.getProduct().getCategory().getId())
+                        .qty(detail.getQty())
+                        .price(detail.getPriceSnapshot())
+                        .subtotal(detail.getSubtotal())
+                        .build())
+                .toList())
+            .build();
 
         AppliedPromoResult promoResult;
         if (request.getPromoCode() != null && !request.getPromoCode().isBlank()) {
@@ -257,7 +270,7 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
                 .createdAt(now())
                 .build())
             .toList();
-        
+
         newData.setSubtotal(subtotal);
         newData.setPromoDiscountAmount(promoDiscount);
         newData.setDiscountAmount(totalDiscount);
@@ -269,6 +282,8 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
         newData.setPayments(payments);
 
         TrxSales dataSales = trxSalesRepository.save(newData);
+
+        trxLoyaltyPointService.processEarnPoint(newData);
 
         if (Boolean.TRUE.equals(promoResult.getApplied())) {
             TrxSalesPromo newDataSalesPromo = TrxSalesPromo.builder()
@@ -344,6 +359,9 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
                 .build();
             trxStockMovementRepository.save(newDataStockMovement);
         }
+
+        trxLoyaltyPointService.reverseEarnPoint(data.getSalesNo());
+        trxLoyaltyPointService.reverseRedeemPoint(data.getSalesNo());
 
         data.setStatus(SalesStatus.CANCELLED);
         data.setCancelledBy(getCurrentUsername());

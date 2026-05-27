@@ -2,11 +2,11 @@ package com.epos.backend.service;
 
 import java.util.List;
 
-import com.epos.backend.model.dto.AppliedPromoResult;
 import com.epos.backend.model.dto.request.CreatePromoRequest;
 import com.epos.backend.model.dto.request.PromoSimulationRequest;
 import com.epos.backend.model.dto.request.UpdatePromoRequest;
 import com.epos.backend.model.dto.response.PromoResponse;
+import com.epos.backend.model.dto.result.AppliedPromoResult;
 
 public interface PromoService {
 

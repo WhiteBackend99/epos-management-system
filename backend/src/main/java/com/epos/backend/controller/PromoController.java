@@ -15,12 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.epos.backend.annotation.AuditLog;
 import com.epos.backend.enums.AuditAction;
 import com.epos.backend.enums.AuditType;
-import com.epos.backend.model.dto.AppliedPromoResult;
 import com.epos.backend.model.dto.request.CreatePromoRequest;
 import com.epos.backend.model.dto.request.PromoSimulationRequest;
 import com.epos.backend.model.dto.request.UpdatePromoRequest;
 import com.epos.backend.model.dto.response.PromoResponse;
 import com.epos.backend.model.dto.response.ResponseData;
+import com.epos.backend.model.dto.result.AppliedPromoResult;
 import com.epos.backend.service.PromoService;
 
 import jakarta.validation.Valid;

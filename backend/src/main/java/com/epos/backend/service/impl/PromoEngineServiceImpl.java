@@ -14,9 +14,9 @@ import org.springframework.stereotype.Service;
 
 import com.epos.backend.enums.PromoApplyType;
 import com.epos.backend.enums.PromoStatus;
-import com.epos.backend.model.dto.AppliedPromoResult;
-import com.epos.backend.model.dto.PromoCalculationContext;
-import com.epos.backend.model.dto.PromoCalculationContext.PromoCalculationItem;
+import com.epos.backend.model.dto.context.PromoCalculationContext;
+import com.epos.backend.model.dto.context.PromoCalculationContext.PromoCalculationItem;
+import com.epos.backend.model.dto.result.AppliedPromoResult;
 import com.epos.backend.model.entity.Promo;
 import com.epos.backend.model.entity.PromoReward;
 import com.epos.backend.model.entity.PromoRule;
