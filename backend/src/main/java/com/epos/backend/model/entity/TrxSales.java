@@ -2,6 +2,7 @@ package com.epos.backend.model.entity;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -26,15 +27,18 @@ import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
+@EqualsAndHashCode(callSuper=true)
 @Data
-@Builder
+@SuperBuilder
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "trx_sales", schema = "public")
-public class TrxSales {
+public class TrxSales extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,33 +51,48 @@ public class TrxSales {
     @Column(name = "customer_name")
     private String customerName;
 
+    @Builder.Default
     @Column(name = "subtotal", precision = 18, scale = 2, nullable = false)
-    private BigDecimal subtotal;
+    private BigDecimal subtotal = BigDecimal.ZERO;;
 
+    @Builder.Default
+    @Column(name = "manual_discount_amount", precision = 18, scale = 2, nullable = false)
+    private BigDecimal manualDiscountAmount = BigDecimal.ZERO;;
+
+    @Builder.Default
+    @Column(name = "promo_discount_amount", precision = 18, scale = 2, nullable = false)
+    private BigDecimal promoDiscountAmount = BigDecimal.ZERO;;
+
+    @Builder.Default
     @Column(name = "discount_amount", precision = 18, scale = 2, nullable = false)
-    private BigDecimal discountAmount;
+    private BigDecimal discountAmount = BigDecimal.ZERO;;
 
+    @Builder.Default
     @Column(name = "tax_amount", precision = 18, scale = 2, nullable = false)
-    private BigDecimal taxAmount;
+    private BigDecimal taxAmount = BigDecimal.ZERO;;
 
+    @Builder.Default
+    @Column(name = "grand_total_before_point", precision = 18, scale = 2, nullable = false)
+    private BigDecimal grandTotalBeforePoint = BigDecimal.ZERO;
+
+    @Builder.Default
     @Column(name = "grand_total", precision = 18, scale = 2, nullable = false)
-    private BigDecimal grandTotal;
+    private BigDecimal grandTotal = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "paid_amount", precision = 18, scale = 2, nullable = false)
-    private BigDecimal paidAmount;
+    private BigDecimal paidAmount = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "change_amount", precision = 18, scale = 2, nullable = false)
-    private BigDecimal changeAmount;
+    private BigDecimal changeAmount = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private SalesStatus status;
 
-    @Column(name = "created_by", nullable = false)
-    private String createdBy;
-
-    @Column(name = "created_at", nullable = false)
-    private Timestamp createdAt;
+    @Column(name = "paid_at")
+    private Timestamp paidAt;
 
     @Column(name = "cancelled_by")
     private String cancelledBy;
@@ -83,9 +102,6 @@ public class TrxSales {
 
     @Column(name = "cancel_reason", columnDefinition = "TEXT")
     private String cancelReason;
-
-    @Column(name = "promo_discount_amount", nullable = false)
-    private BigDecimal promoDiscountAmount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_member_id")
@@ -97,15 +113,19 @@ public class TrxSales {
     @Column(name = "member_name_snapshot")
     private String memberNameSnapshot;
 
+    @Builder.Default
     @Column(name = "point_earned", nullable = false)
-    private Long pointEarned = 0l;
+    private Long pointEarned = 0L;
 
+    @Builder.Default
     @Column(name = "point_redeemed", nullable = false)
-    private Long pointRedeemed = 0l;
+    private Long pointRedeemed = 0L;
 
+    @Builder.Default
     @Column(name = "point_discount_amount", nullable = false)
     private BigDecimal pointDiscountAmount = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "loyalty_processed_flag", nullable = false)
     private Boolean loyaltyProcessedFlag = false;
 
@@ -117,10 +137,12 @@ public class TrxSales {
     @JoinColumn(name = "cashier_shift_id")
     private TrxCashierShift cashierShift;;
 
+    @Builder.Default
     @OneToMany(mappedBy = "sales", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TrxSalesDetail> details;
+    private List<TrxSalesDetail> details = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "sales", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TrxSalesPayment> payments;
+    private List<TrxSalesPayment> payments= new ArrayList<>();
 
 }

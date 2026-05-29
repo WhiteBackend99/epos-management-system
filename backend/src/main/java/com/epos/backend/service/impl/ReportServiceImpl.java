@@ -93,7 +93,7 @@ public class ReportServiceImpl extends Services implements ReportService {
     public DailySalesSummaryResponse getDailySalesSummary(ReportSearchRequest request) {
         request = sectionRevampSearchRequest(request);
         String sql = """
-                SELECT COALESCE(SUM(CASE WHEN ts.STATUS = 'SUCCESS' THEN ts.grand_total ELSE 0 END), 0) AS gross_sales
+                SELECT COALESCE(SUM(CASE WHEN ts.STATUS = 'PAID' THEN ts.grand_total ELSE 0 END), 0) AS gross_sales
                     ,COALESCE((
                         SELECT SUM(tsr.refund_amount)
                         FROM trx_sales_return tsr
@@ -112,7 +112,7 @@ public class ReportServiceImpl extends Services implements ReportService {
                                 OR LOWER(COALESCE(tcs.shift_no, '')) LIKE CAST(:keyword AS VARCHAR)
                             )
                     ), 0) AS total_refund
-                    ,COUNT(DISTINCT CASE WHEN ts.status = 'SUCCESS' THEN ts.id END) AS success_transaction_count
+                    ,COUNT(DISTINCT CASE WHEN ts.status = 'PAID' THEN ts.id END) AS success_transaction_count
                     ,COUNT(DISTINCT CASE WHEN ts.status = 'CANCELLED' THEN ts.id END) AS cancelled_transaction_count
                     ,COALESCE((
                         SELECT COUNT(DISTINCT tsr2.id)
@@ -177,7 +177,7 @@ public class ReportServiceImpl extends Services implements ReportService {
                 FROM trx_sales_payment tsp
                     JOIN trx_sales ts ON ts.id = tsp.sales_id
                     LEFT JOIN trx_cashier_shift tcs on tcs.id = ts.cashier_shift_id
-                WHERE ts.status = 'SUCCESS'
+                WHERE ts.status = 'PAID'
                     AND ts.created_at BETWEEN :startDate AND :endDate
                     AND (CAST(:paymentMethod AS VARCHAR) IS NULL OR tsp.payment_method = CAST(:paymentMethod AS VARCHAR))
                     AND (CAST(:cashierUsername AS VARCHAR) IS NULL OR tcs.cashier_username = CAST(:cashierUsername AS VARCHAR))
@@ -307,7 +307,7 @@ public class ReportServiceImpl extends Services implements ReportService {
                     FROM trx_sales_detail tsd
                         JOIN trx_sales ts ON ts.id = tsd.sales_id
                         LEFT JOIN trx_cashier_shift tcs on tcs.id = ts.cashier_shift_id
-                    WHERE ts.status = 'SUCCESS'
+                    WHERE ts.status = 'PAID'
                         AND ts.created_at BETWEEN :startDate AND :endDate
                         AND (CAST(:productId AS NUMERIC) IS NULL OR tsd.product_id = CAST(:productId AS NUMERIC))
                         AND (CAST(:cashierUsername AS VARCHAR) IS NULL OR tcs.cashier_username = CAST(:cashierUsername AS VARCHAR))

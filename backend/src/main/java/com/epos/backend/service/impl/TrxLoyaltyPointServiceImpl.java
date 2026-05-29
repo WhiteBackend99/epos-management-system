@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.epos.backend.enums.LoyaltyPointType;
 import com.epos.backend.enums.MemberStatus;
+import com.epos.backend.enums.SalesStatus;
 import com.epos.backend.model.dto.request.RedeemPointRequest;
 import com.epos.backend.model.dto.response.RedeemPointResponse;
 import com.epos.backend.model.dto.result.FormulaCalculationResult;
@@ -62,17 +63,15 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
     @Override
     public RedeemPointResponse redeemPoint(RedeemPointRequest request) {
         TrxSales dataSales = trxSalesRepository.findBySalesNoForUpdate(request.getSalesNo()).orElseThrow(() -> new IllegalArgumentException("Transaksi sales tidak ditemukan"));
-        if (dataSales.getPointRedeemed() != null && dataSales.getPointRedeemed() > 0) {
-            throw new IllegalArgumentException("Transaksi ini sudah pernah melakukan redeem point");
-        }
+        
+        if (dataSales.getPointRedeemed() != null && dataSales.getPointRedeemed() > 0) throw new IllegalArgumentException("Transaksi ini sudah pernah melakukan redeem point");
+        if (!SalesStatus.DRAFT.equals(dataSales.getStatus())) throw new IllegalArgumentException("Redeem point hanya dapat dilakukan pada transaksi DRAFT");
 
         CustomerMember dataMember = customerMemberRepository.findByMemberCodeForUpdate(request.getMemberCode()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
 
         validationDataMember(dataMember);
 
-        if (dataMember.getTotalPoint() < request.getRedeemPoint()) {
-            throw new IllegalArgumentException("Saldo point tidak mencukupi");
-        }
+        if (dataMember.getTotalPoint() < request.getRedeemPoint()) throw new IllegalArgumentException("Saldo point tidak mencukupi");
 
         LoyaltyRule dataLoyaltyRule = loyaltyRuleRepository.findActiveRule().orElseThrow(() -> new IllegalArgumentException("Rule loyalty aktif tidak ditemukan"));
 
@@ -85,9 +84,7 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         BigDecimal grandTotal = dataSales.getGrandTotal();
         BigDecimal maxRedeemAmount = grandTotal.multiply(dataLoyaltyRule.getMaxRedeemPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN);
 
-        if (redeemAmount.compareTo(maxRedeemAmount) > 0) {
-            throw new IllegalArgumentException("Nominal redeem melebihi batas maksimal transaksi");
-        }
+        if (redeemAmount.compareTo(maxRedeemAmount) > 0) throw new IllegalArgumentException("Nominal redeem melebihi batas maksimal transaksi");
 
         long beforeBalance = dataMember.getTotalPoint();
         long afterBalance = beforeBalance - request.getRedeemPoint();
@@ -95,30 +92,28 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
 
         TrxLoyaltyPointLedger newDataPointLedger = trxLoyaltyPointLedgerRepository.save(
             TrxLoyaltyPointLedger.builder()
-                .customerMember(dataMember)
-                .salesNo(dataSales.getSalesNo())
-                .referenceNo(referenceNo)
-                .pointType(LoyaltyPointType.REDEEM)
-                .pointAmount(request.getRedeemPoint() * -1)
-                .balanceBefore(beforeBalance)
-                .balanceAfter(afterBalance)
-                .description("Redeem point untuk sales " + dataSales.getSalesNo())
-                .formulaId(formulaResult.getFormulaId())
-                .formulaVersionId(formulaResult.getFormulaVersionId())
-                .formulaExpressionSnapshot(formulaResult.getExpression())
-                .formulaContextSnapshot(formulaResult.getContext())
-                .formulaResultSnapshot(formulaResult.getResult())
-                .createdBy(getCurrentUsername())
-                .createdAt(now())
+                    .customerMember(dataMember)
+                    .salesNo(dataSales.getSalesNo())
+                    .referenceNo(referenceNo)
+                    .pointType(LoyaltyPointType.REDEEM)
+                    .pointAmount(request.getRedeemPoint() * -1)
+                    .balanceBefore(beforeBalance)
+                    .balanceAfter(afterBalance)
+                    .description("Redeem point untuk sales " + dataSales.getSalesNo())
+                    .formulaId(formulaResult.getFormulaId())
+                    .formulaVersionId(formulaResult.getFormulaVersionId())
+                    .formulaExpressionSnapshot(formulaResult.getExpression())
+                    .formulaContextSnapshot(formulaResult.getContext())
+                    .formulaResultSnapshot(formulaResult.getResult())
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
                 .build()
         );
 
         long remainingRedeem = request.getRedeemPoint();
         List<TrxLoyaltyPointBucket> buckets = trxLoyaltyPointBucketRepository.findActiveBucketsForRedeem(dataMember.getId());
         for (TrxLoyaltyPointBucket bucket : buckets) {
-            if (remainingRedeem <= 0) {
-                break;
-            }
+            if (remainingRedeem <= 0) break;
 
             long usedPoint = Math.min(bucket.getRemainingPoint(), remainingRedeem);
 
@@ -131,19 +126,17 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
 
             trxLoyaltyPointRedemptionDetailRepository.save(
                 TrxLoyaltyPointRedemptionDetail.builder()
-                    .ledger(newDataPointLedger)
-                    .bucket(bucket)
-                    .usedPoint(usedPoint)
-                    .createdBy(getCurrentUsername())
-                    .createdAt(now())
+                        .ledger(newDataPointLedger)
+                        .bucket(bucket)
+                        .usedPoint(usedPoint)
+                        .createdBy(getCurrentUsername())
+                        .createdAt(now())
                     .build()
             );
             remainingRedeem -= usedPoint;
         }
 
-        if (remainingRedeem > 0) {
-            throw new IllegalArgumentException("Bucket point tidak mencukupi");
-        }
+        if (remainingRedeem > 0) throw new IllegalArgumentException("Bucket point tidak mencukupi");
 
         dataMember.setTotalPoint(afterBalance);
         customerMemberRepository.save(dataMember);
@@ -163,23 +156,16 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
                 .redeemPoint(request.getRedeemPoint())
                 .redeemAmount(redeemAmount)
                 .remainingPoint(afterBalance)
-                .build();
+            .build();
     }
 
     @Transactional
     @Override
     public void processEarnPoint(TrxSales dataSales) {
-        if (dataSales == null || dataSales.getCustomerMember() == null) {
-            return;
-        }
-
-        if (Boolean.TRUE.equals(dataSales.getLoyaltyProcessedFlag())) {
-            return;
-        }
-
-        if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(dataSales.getSalesNo(), LoyaltyPointType.EARN)) {
-            return;
-        }
+        if (!SalesStatus.PAID.equals(dataSales.getStatus())) return;
+        if (dataSales == null || dataSales.getCustomerMember() == null) return;
+        if (Boolean.TRUE.equals(dataSales.getLoyaltyProcessedFlag())) return;
+        if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(dataSales.getSalesNo(), LoyaltyPointType.EARN)) return;
 
         CustomerMember dataMember = customerMemberRepository.findByIdForUpdate(dataSales.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
 
@@ -188,13 +174,8 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         LoyaltyRule dataLoyaltyRule = loyaltyRuleRepository.findActiveRule().orElseThrow(() -> new IllegalArgumentException("Rule loyalty aktif tidak ditemukan"));
         BigDecimal netAmount = dataSales.getGrandTotal();
 
-        if (netAmount == null || netAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return;
-        }
-
-        if (netAmount.compareTo(dataLoyaltyRule.getMinimumTransactionAmount()) < 0) {
-            return;
-        }
+        if (netAmount == null || netAmount.compareTo(BigDecimal.ZERO) <= 0) return;
+        if (netAmount.compareTo(dataLoyaltyRule.getMinimumTransactionAmount()) < 0) return;
 
         Map<String, BigDecimal> variables = new HashMap<>();
         variables.put("NET_AMOUNT", netAmount);
@@ -215,33 +196,33 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
 
         TrxLoyaltyPointLedger newDataPointLedger = trxLoyaltyPointLedgerRepository.save(
             TrxLoyaltyPointLedger.builder()
-                .customerMember(dataMember)
-                .salesNo(dataSales.getSalesNo())
-                .referenceNo(referenceNo)
-                .pointType(LoyaltyPointType.EARN)
-                .pointAmount(earnedPoint)
-                .balanceBefore(beforeBalance)
-                .balanceAfter(afterBalance)
-                .description("Point dari transaksi sales " + dataSales.getSalesNo())
-                .formulaId(formulaResult.getFormulaId())
-                .formulaVersionId(formulaResult.getFormulaVersionId())
-                .formulaExpressionSnapshot(formulaResult.getExpression())
-                .formulaContextSnapshot(formulaResult.getContext())
-                .formulaResultSnapshot(formulaResult.getResult())
-                .createdBy(getCurrentUsername())
-                .createdAt(now())
+                    .customerMember(dataMember)
+                    .salesNo(dataSales.getSalesNo())
+                    .referenceNo(referenceNo)
+                    .pointType(LoyaltyPointType.EARN)
+                    .pointAmount(earnedPoint)
+                    .balanceBefore(beforeBalance)
+                    .balanceAfter(afterBalance)
+                    .description("Point dari transaksi sales " + dataSales.getSalesNo())
+                    .formulaId(formulaResult.getFormulaId())
+                    .formulaVersionId(formulaResult.getFormulaVersionId())
+                    .formulaExpressionSnapshot(formulaResult.getExpression())
+                    .formulaContextSnapshot(formulaResult.getContext())
+                    .formulaResultSnapshot(formulaResult.getResult())
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
                 .build()
         );
 
         trxLoyaltyPointBucketRepository.save(
             TrxLoyaltyPointBucket.builder()
-                .customerMember(dataMember)
-                .ledger(newDataPointLedger)
-                .totalPoint(earnedPoint)
-                .remainingPoint(earnedPoint)
-                .expiredAt(LocalDateTime.now().plusDays(dataLoyaltyRule.getExpiredAfterDays()))
-                .createdBy(getCurrentUsername())
-                .createdAt(now())
+                    .customerMember(dataMember)
+                    .ledger(newDataPointLedger)
+                    .totalPoint(earnedPoint)
+                    .remainingPoint(earnedPoint)
+                    .expiredAt(LocalDateTime.now().plusDays(dataLoyaltyRule.getExpiredAfterDays()))
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
                 .build()
         );
 
@@ -259,13 +240,9 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
     @Override
     public void reverseEarnPoint(String salesNo) {
         TrxLoyaltyPointLedger dateEarnLedger = trxLoyaltyPointLedgerRepository.findBySalesNoAndPointType(salesNo, LoyaltyPointType.EARN).orElse(null);
-        if (dateEarnLedger == null) {
-            return;
-        }
 
-        if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(salesNo, LoyaltyPointType.REVERSE_EARN)) {
-            return;
-        }
+        if (dateEarnLedger == null) return;
+        if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(salesNo, LoyaltyPointType.REVERSE_EARN)) return;
 
         CustomerMember dataMember = customerMemberRepository.findByIdForUpdate(dateEarnLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
         long reversePoint = Math.abs(dateEarnLedger.getPointAmount());
@@ -274,16 +251,16 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
 
         trxLoyaltyPointLedgerRepository.save(
             TrxLoyaltyPointLedger.builder()
-                .customerMember(dataMember)
-                .salesNo(salesNo)
-                .referenceNo("REV-EARN-" + salesNo)
-                .pointType(LoyaltyPointType.REVERSE_EARN)
-                .pointAmount(reversePoint * -1)
-                .balanceBefore(beforeBalance)
-                .balanceAfter(afterBalance)
-                .description("Reverse earn point sales " + salesNo)
-                .createdBy(getCurrentUsername())
-                .createdAt(now())
+                    .customerMember(dataMember)
+                    .salesNo(salesNo)
+                    .referenceNo("REV-EARN-" + salesNo)
+                    .pointType(LoyaltyPointType.REVERSE_EARN)
+                    .pointAmount(reversePoint * -1)
+                    .balanceBefore(beforeBalance)
+                    .balanceAfter(afterBalance)
+                    .description("Reverse earn point sales " + salesNo)
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
                 .build()
         );
 
@@ -295,13 +272,8 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
     @Override
     public void reverseRedeemPoint(String salesNo) {
         TrxLoyaltyPointLedger dataPointLedger = trxLoyaltyPointLedgerRepository.findBySalesNoAndPointType(salesNo, LoyaltyPointType.REDEEM).orElse(null);
-        if (dataPointLedger == null) {
-            return;
-        }
-
-        if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(salesNo, LoyaltyPointType.REVERSE_REDEEM)) {
-            return;
-        }
+        if (dataPointLedger == null) return;
+        if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(salesNo, LoyaltyPointType.REVERSE_REDEEM)) return;
 
         CustomerMember dataMember = customerMemberRepository.findByIdForUpdate(dataPointLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
         long restoredPoint = Math.abs(dataPointLedger.getPointAmount());
@@ -310,16 +282,16 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
 
         trxLoyaltyPointLedgerRepository.save(
             TrxLoyaltyPointLedger.builder()
-                .customerMember(dataMember)
-                .salesNo(salesNo)
-                .referenceNo("REV-REDEEM-" + salesNo)
-                .pointType(LoyaltyPointType.REVERSE_REDEEM)
-                .pointAmount(restoredPoint)
-                .balanceBefore(beforeBalance)
-                .balanceAfter(afterBalance)
-                .description("Restore redeem point sales " + salesNo)
-                .createdBy(getCurrentUsername())
-                .createdAt(now())
+                    .customerMember(dataMember)
+                    .salesNo(salesNo)
+                    .referenceNo("REV-REDEEM-" + salesNo)
+                    .pointType(LoyaltyPointType.REVERSE_REDEEM)
+                    .pointAmount(restoredPoint)
+                    .balanceBefore(beforeBalance)
+                    .balanceAfter(afterBalance)
+                    .description("Restore redeem point sales " + salesNo)
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
                 .build()
         );
 

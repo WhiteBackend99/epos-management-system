@@ -9,4 +9,6 @@ import com.epos.backend.model.entity.TrxSalesPromo;
 public interface TrxSalesPromoRepository extends JpaRepository<TrxSalesPromo, Long> {
 
     public List<TrxSalesPromo> findBySalesId(Long salesId);
+    public List<TrxSalesPromo> findBySalesNo(String salesNo);
+
 }

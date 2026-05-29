@@ -3,7 +3,7 @@ package com.epos.backend.util;
 import java.math.BigDecimal;
 import java.util.List;
 
-import com.epos.backend.model.dto.request.PosSalesRequest.PosSalesPaymentRequest;
+import com.epos.backend.model.dto.request.PosSalesPaymentSettlementRequest.PosSalesPaymentRequest;
 
 public class FunctionUtil {
 

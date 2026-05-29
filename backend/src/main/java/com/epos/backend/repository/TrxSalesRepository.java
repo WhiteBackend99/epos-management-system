@@ -2,9 +2,8 @@ package com.epos.backend.repository;
 
 import java.util.Optional;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,10 +13,9 @@ import com.epos.backend.model.projection.CashierShiftSummaryProjection;
 
 import jakarta.persistence.LockModeType;
 
-public interface TrxSalesRepository extends JpaRepository<TrxSales, Long> {
+public interface TrxSalesRepository extends JpaRepository<TrxSales, Long>, JpaSpecificationExecutor<TrxSales> {
 
     public Optional<TrxSales> findBySalesNo(String salesNo);
-    public Page<TrxSales> findBySalesNoContainingIgnoreCaseOrCustomerNameContainingIgnoreCase(String salesNo, String customerName, Pageable pageable);
     
     @Query(value = """
             SELECT COALESCE(SUM(ts.GRAND_TOTAL), 0) AS totalSalesAmount
@@ -29,16 +27,23 @@ public interface TrxSalesRepository extends JpaRepository<TrxSales, Long> {
             FROM trx_sales ts
                 LEFT JOIN trx_sales_payment tsp ON tsp.sales_id = ts.id
             WHERE ts.cashier_shift_id = :shiftId
-                AND ts.status = 'SUCCESS'
-            """, nativeQuery = true)
-    public CashierShiftSummaryProjection getSalesSummaryByShiftId(Long shiftId);
+                AND ts.status = 'PAID'
+        """, nativeQuery = true)
+    public CashierShiftSummaryProjection getSalesSummaryByShiftId(@Param("shiftId") Long shiftId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             SELECT ts
             FROM TrxSales ts
             WHERE ts.salesNo = :salesNo
-            """)
+        """)
     public Optional<TrxSales> findBySalesNoForUpdate(@Param("salesNo") String salesNo);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT ts
+            FROM TrxSales ts
+            WHERE ts.id = :id
+        """)
+    public Optional<TrxSales> findByIdForUpdate(@Param("id") Long id);
 }

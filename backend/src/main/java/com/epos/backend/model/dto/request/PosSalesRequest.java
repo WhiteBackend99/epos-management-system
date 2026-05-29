@@ -3,8 +3,6 @@ package com.epos.backend.model.dto.request;
 import java.math.BigDecimal;
 import java.util.List;
 
-import com.epos.backend.enums.PaymentMethod;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -26,10 +24,6 @@ public class PosSalesRequest {
     @NotEmpty(message = "Item penjualan tidak boleh kosong")
     private List<PosSalesItemRequest> items;
 
-    @Valid
-    @NotEmpty(message = "Pembayaran tidak boleh kosong")
-    private List<PosSalesPaymentRequest> payments;
-
     @Data
     @Builder
     public static class PosSalesItemRequest {
@@ -40,17 +34,6 @@ public class PosSalesRequest {
         @NotNull(message = "Kuantiti wajib diisi")
         @Min(value = 1, message = "Kuantiti minimal 1")
         private Long qty;
-    }
-
-    @Data
-    @Builder
-    public static class PosSalesPaymentRequest {
-
-        @NotNull(message = "Tipe pembayaran wajib diisi")
-        private PaymentMethod paymentMethod;
-
-        @NotNull(message = "Nominal pembayaran wajib diisi")
-        private BigDecimal paidAmount;
     }
 
 }
