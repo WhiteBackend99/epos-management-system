@@ -4,9 +4,13 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.epos.backend.model.entity.Supplier;
+
+import jakarta.persistence.LockModeType;
 
 public interface SupplierRepository extends JpaRepository<Supplier, Long>, JpaSpecificationExecutor<Supplier> {
 
@@ -20,5 +24,14 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long>, JpaSp
     
     @Query(value = "select nextval('seq_supplier_code')", nativeQuery = true)
     public Long getNextSupplierCodeSequence();
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT s
+            FROM Supplier s
+            WHERE s.id = :id
+            AND s.isDeleted = false
+        """)
+    public Optional<Supplier> findByIdForUpdate(@Param("id") Long id);
 
 }

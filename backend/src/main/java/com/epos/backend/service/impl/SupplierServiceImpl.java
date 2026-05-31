@@ -15,7 +15,6 @@ import com.epos.backend.model.entity.Supplier;
 import com.epos.backend.repository.SupplierRepository;
 import com.epos.backend.service.SupplierService;
 import com.epos.backend.specification.SupplierSpecification;
-import com.epos.backend.util.GeneratorUtil;
 import com.epos.backend.util.ParseUtil;
 
 import lombok.RequiredArgsConstructor;
@@ -72,8 +71,7 @@ public class SupplierServiceImpl extends Services implements SupplierService {
     public SupplierResponse createSupplier(SupplierRequest request) {
         validationCreate(request);
 
-        Long sequence = supplierRepository.getNextSupplierCodeSequence();
-        String supplierCode = GeneratorUtil.generateSupplierCode(sequence);
+        String supplierCode = automationGeneratorServices.generateSupplierCode();
 
         Supplier newData = Supplier.builder()
             .supplierCode(supplierCode)

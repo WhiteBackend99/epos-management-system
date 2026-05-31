@@ -29,6 +29,7 @@ import com.epos.backend.repository.TrxLoyaltyPointLedgerRepository;
 import com.epos.backend.repository.TrxLoyaltyPointRedemptionDetailRepository;
 import com.epos.backend.repository.TrxSalesRepository;
 import com.epos.backend.service.FormulaEngineService;
+import com.epos.backend.service.SystemParameterService;
 import com.epos.backend.service.TrxLoyaltyPointService;
 
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
     private final TrxLoyaltyPointRedemptionDetailRepository trxLoyaltyPointRedemptionDetailRepository;
     private final TrxSalesRepository trxSalesRepository;
     private final FormulaEngineService formulaEngineService;
+    private final SystemParameterService systemParameterService;
 
     private void validationDataMember(CustomerMember data) {
         if (data.getMemberStatus() == MemberStatus.INACTIVE) {
@@ -74,10 +76,11 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         if (dataMember.getTotalPoint() < request.getRedeemPoint()) throw new IllegalArgumentException("Saldo point tidak mencukupi");
 
         LoyaltyRule dataLoyaltyRule = loyaltyRuleRepository.findActiveRule().orElseThrow(() -> new IllegalArgumentException("Rule loyalty aktif tidak ditemukan"));
+        BigDecimal pointValueAmount = systemParameterService.getDecimalValue("LOYALTY_POINT_VALUE_AMOUNT", dataLoyaltyRule.getPointValueAmount());
 
         Map<String, BigDecimal> variables = new HashMap<>();
         variables.put("REDEEM_POINT", BigDecimal.valueOf(request.getRedeemPoint()));
-        variables.put("POINT_VALUE_AMOUNT", dataLoyaltyRule.getPointValueAmount());
+        variables.put("POINT_VALUE_AMOUNT", pointValueAmount);
         FormulaCalculationResult formulaResult = formulaEngineService.evaluate("LOYALTY_REDEEM_AMOUNT",variables);
 
         BigDecimal redeemAmount = formulaResult.getResult().setScale(2, RoundingMode.DOWN);
@@ -172,14 +175,17 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         validationDataMember(dataMember);
 
         LoyaltyRule dataLoyaltyRule = loyaltyRuleRepository.findActiveRule().orElseThrow(() -> new IllegalArgumentException("Rule loyalty aktif tidak ditemukan"));
+        BigDecimal amountPerPoint = systemParameterService.getDecimalValue("LOYALTY_AMOUNT_PER_POINT", dataLoyaltyRule.getAmountPerPoint());
+        BigDecimal minimumTransactionAmount = systemParameterService.getDecimalValue("LOYALTY_MIN_TRANSACTION_AMOUNT",dataLoyaltyRule.getMinimumTransactionAmount());
         BigDecimal netAmount = dataSales.getGrandTotal();
 
         if (netAmount == null || netAmount.compareTo(BigDecimal.ZERO) <= 0) return;
         if (netAmount.compareTo(dataLoyaltyRule.getMinimumTransactionAmount()) < 0) return;
+        if (netAmount.compareTo(minimumTransactionAmount) < 0) return;
 
         Map<String, BigDecimal> variables = new HashMap<>();
         variables.put("NET_AMOUNT", netAmount);
-        variables.put("AMOUNT_PER_POINT", dataLoyaltyRule.getAmountPerPoint());
+        variables.put("AMOUNT_PER_POINT", amountPerPoint);
         variables.put("POINT_EARNED", dataLoyaltyRule.getPointEarned());
         variables.put("TIER_MULTIPLIER", dataMember.getMemberTier().getPointMultiplier());
 

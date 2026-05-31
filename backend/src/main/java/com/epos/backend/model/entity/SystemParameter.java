@@ -15,24 +15,33 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-@EqualsAndHashCode(callSuper=true)
+@EqualsAndHashCode(callSuper = true)
 @Data
 @SuperBuilder
 @Entity
-@AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "mst_category", schema = "public")
-public class Category extends BaseEntity {
+@AllArgsConstructor
+@Table(name = "mst_system_parameter", schema = "public")
+public class SystemParameter extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "name", nullable = false, unique = true)
-    private String name;
+    @Column(name = "parameter_code", nullable = false, unique = true, length = 100)
+    private String parameterCode;
 
-    @Column(name = "description")
+    @Column(name = "parameter_name", nullable = false, length = 150)
+    private String parameterName;
+
+    @Column(name = "parameter_value", nullable = false, columnDefinition = "TEXT")
+    private String parameterValue;
+
+    @Column(name = "parameter_type", nullable = false, length = 50)
+    private String parameterType;
+
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Builder.Default

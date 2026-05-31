@@ -162,12 +162,11 @@ public class TrxPurchaseServiceImpl extends Services implements TrxPurchaseServi
         validationPurchase(request);
 
         Supplier dataSupplier = supplierRepository.findByIdAndIsDeletedFalse(request.getSupplierId()).orElseThrow(() -> new RuntimeException("Supplier tidak ditemukan"));
-        Long seqPurchase = trxPurchaseRepository.getNextPurchaseNoSequence();
         Long seqInvoice = trxPurchaseRepository.getNextPurchaseInvoiceNoSequence();
         BigDecimal subTotalAmount = BigDecimal.ZERO;
 
         TrxPurchase newData = TrxPurchase.builder()
-            .purchaseNo(GeneratorUtil.generatePurchaseNo(seqPurchase))
+            .purchaseNo(automationGeneratorServices.generatePurchaseNo())
             .invoiceNo(GeneratorUtil.generateInvoiceNo(seqInvoice))
             .supplier(dataSupplier)
             .purchaseDate(request.getPurchaseDate())

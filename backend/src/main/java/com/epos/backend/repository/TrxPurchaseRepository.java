@@ -4,10 +4,13 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.epos.backend.model.entity.TrxPurchase;
+
+import jakarta.persistence.LockModeType;
 
 public interface TrxPurchaseRepository extends JpaRepository<TrxPurchase, Long>, JpaSpecificationExecutor<TrxPurchase> {
 
@@ -30,4 +33,19 @@ public interface TrxPurchaseRepository extends JpaRepository<TrxPurchase, Long>,
         """)
     public Optional<TrxPurchase> findDetailById(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT tp
+            FROM TrxPurchase tp
+            WHERE tp.id = :id
+        """)
+    public Optional<TrxPurchase> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT tp
+            FROM TrxPurchase tp
+            WHERE tp.purchaseNo = :purchaseNo
+        """)
+    public Optional<TrxPurchase> findByPurchaseNoForUpdate(@Param("purchaseNo") String purchaseNo);
 }

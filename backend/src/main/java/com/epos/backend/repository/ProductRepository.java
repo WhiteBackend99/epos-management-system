@@ -19,9 +19,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     public boolean existsByNameAndIsDeletedFalse(String name);
     public boolean existsBySku(String sku);
     public Page<Product> findByIsDeletedFalse(Pageable pageable);
+    public Optional<Product> findByIdAndIsDeletedFalse(Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Product p WHERE p.id = :id AND p.isDeleted = false")
-    Optional<Product> findActiveProductForUpdate(@Param("id") Long id);
+    public Optional<Product> findActiveProductForUpdate(@Param("id") Long id);
 
 }

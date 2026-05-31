@@ -47,7 +47,6 @@ import com.epos.backend.service.PosSalesService;
 import com.epos.backend.service.PromoEngineService;
 import com.epos.backend.service.TrxLoyaltyPointService;
 import com.epos.backend.specification.TrxSalesSpecification;
-import com.epos.backend.util.GeneratorUtil;
 import com.epos.backend.util.ParseUtil;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -212,7 +211,7 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
 
         validationDraftRequest(request);
 
-        String salesNo = GeneratorUtil.generateSalesNo();
+        String salesNo = automationGeneratorServices.generateSalesNo();
         List<TrxSalesDetail> salesDetails = new ArrayList<>();
         BigDecimal subtotal = BigDecimal.ZERO;
 

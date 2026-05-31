@@ -7,15 +7,18 @@ import lombok.Data;
 
 @Data
 @Builder
-public class CategoryResponse {
+public class SystemParameterResponse {
 
     private Long id;
-    private String name;
+    private String parameterCode;
+    private String parameterName;
+    private String parameterValue;
+    private String parameterType;
     private String description;
     private Boolean isActive;
     private String createdBy;
     private Timestamp createdAt;
     private String updatedBy;
     private Timestamp updatedAt;
-
+    
 }

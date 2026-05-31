@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.epos.backend.security.CurrentUserService;
+import com.epos.backend.service.AutomationGeneratorServices;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -16,6 +17,9 @@ public abstract class Services {
 
     @Autowired
     protected CurrentUserService currentUserService;
+
+    @Autowired
+    protected AutomationGeneratorServices automationGeneratorServices;
 
     /* -------------------------------- FUNCTION PROTECTED -------------------------------------- */
     protected String getCurrentUsername() {
