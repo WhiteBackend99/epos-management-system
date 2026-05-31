@@ -37,6 +37,7 @@ import com.epos.backend.repository.TrxSalesRepository;
 import com.epos.backend.repository.TrxSalesReturnDetailRepository;
 import com.epos.backend.repository.TrxSalesReturnRepository;
 import com.epos.backend.repository.TrxStockMovementRepository;
+import com.epos.backend.service.TrxLoyaltyPointService;
 import com.epos.backend.service.TrxSalesReturnService;
 import com.epos.backend.specification.TrxSalesReturnSpecification;
 import com.epos.backend.util.GeneratorUtil;
@@ -55,6 +56,7 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
     private final TrxStockMovementRepository trxStockMovementRepository;
     private final TrxCashierShiftRepository trxCashierShiftRepository;
     private final ProductRepository productRepository;
+    private final TrxLoyaltyPointService trxLoyaltyPointService;
 
     private TrxSalesReturnResponse buildEntityToResponse(TrxSalesReturn data) {
         return TrxSalesReturnResponse.builder()
@@ -113,7 +115,11 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
 
     private void validationSalesCanBeReturned(TrxSales data) {
         if (SalesStatus.CANCELLED.equals(data.getStatus())) {
-            throw new IllegalArgumentException("Penjualan yang sudah batalkan tidak bisa direturn");
+            throw new IllegalArgumentException("Penjualan yang sudah dibatalkan tidak bisa direturn");
+        }
+
+        if (!SalesStatus.PAID.equals(data.getStatus())) {
+            throw new IllegalArgumentException("Hanya penjualan yang sudah PAID yang bisa direturn");
         }
     }
 
@@ -235,6 +241,10 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
             newData.setRefundAmount(BigDecimal.ZERO);
             newData.setRefundStatus(RefundStatus.NO_REFUND);
         }
+
+        Long reversePoint = trxLoyaltyPointService.reverseEarnPointForReturn(dataSales.getSalesNo(), newData.getReturnNo(), totalReturnAmount);
+        newData.setLoyaltyReversePoint(reversePoint);
+        newData.setLoyaltyProcessedFlag(reversePoint > 0);
 
         TrxSalesReturn dataSaved = trxSalesReturnRepository.save(newData);
         return buildEntityToResponse(dataSaved);

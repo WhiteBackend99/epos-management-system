@@ -100,7 +100,7 @@ public class PosSalesController {
         type = AuditType.POS_SALES,
         action = AuditAction.VIEW
     )
-    @GetMapping(value = "/search-data")
+    @PostMapping(value = "/search-data")
     public ResponseEntity<ResponseData<Page<PosSalesResponse>>> searchData(@RequestBody PosSalesSearchRequest request) {
         ResponseData<Page<PosSalesResponse>> response = ResponseData.<Page<PosSalesResponse>> builder()
                 .success(true)

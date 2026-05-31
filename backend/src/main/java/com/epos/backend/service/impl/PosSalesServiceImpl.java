@@ -47,7 +47,6 @@ import com.epos.backend.service.PosSalesService;
 import com.epos.backend.service.PromoEngineService;
 import com.epos.backend.service.TrxLoyaltyPointService;
 import com.epos.backend.specification.TrxSalesSpecification;
-import com.epos.backend.util.FunctionUtil;
 import com.epos.backend.util.GeneratorUtil;
 import com.epos.backend.util.ParseUtil;
 
@@ -100,6 +99,17 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
                 .cancelledBy(data.getCancelledBy())
                 .cancelledAt(data.getCancelledAt())
                 .cancelReason(data.getCancelReason())
+                .customerMemberId(data.getCustomerMember() == null ? null : data.getCustomerMember().getId())
+                .memberCodeSnapshot(data.getMemberCodeSnapshot())
+                .memberNameSnapshot(data.getMemberNameSnapshot())
+                .manualDiscountAmount(data.getManualDiscountAmount())
+                .promoDiscountAmount(data.getPromoDiscountAmount())
+                .grandTotalBeforePoint(data.getGrandTotalBeforePoint())
+                .pointDiscountAmount(data.getPointDiscountAmount())
+                .pointEarned(data.getPointEarned())
+                .pointRedeemed(data.getPointRedeemed())
+                .loyaltyProcessedFlag(data.getLoyaltyProcessedFlag())
+                .paidAt(data.getPaidAt())
                 .details(details)
                 .payments(payments)
             .build();
@@ -203,6 +213,8 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
         validationDraftRequest(request);
 
         String salesNo = GeneratorUtil.generateSalesNo();
+        List<TrxSalesDetail> salesDetails = new ArrayList<>();
+        BigDecimal subtotal = BigDecimal.ZERO;
 
         TrxSales newData = TrxSales.builder()
                 .salesNo(salesNo)
@@ -234,9 +246,6 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
             newData.setMemberCodeSnapshot(dataMember.getMemberCode());
             newData.setMemberNameSnapshot(dataMember.getFullName());
         }
-
-        List<TrxSalesDetail> salesDetails = new ArrayList<>();
-        BigDecimal subtotal = BigDecimal.ZERO;
 
         for (PosSalesItemRequest requestItem : request.getItems()) {
             Product dataProduct = productRepository.findById(requestItem.getProductId()).orElseThrow(() -> new EntityNotFoundException("Produk tidak ditemukan: " + requestItem.getProductId()));
@@ -288,9 +297,8 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
         BigDecimal manualDiscount = ParseUtil.defaultAmount(request.getDiscountAmount());
         BigDecimal totalDiscount = manualDiscount.add(promoDiscount);
         BigDecimal tax = ParseUtil.defaultAmount(request.getTaxAmount());
-
         BigDecimal grandTotalBeforePoint = subtotal.subtract(totalDiscount).add(tax);
-        
+
         validationGrandTotal(grandTotalBeforePoint);
 
         newData.setSubtotal(subtotal);
@@ -305,20 +313,20 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
         TrxSales dataSales = trxSalesRepository.save(newData);
 
         if (Boolean.TRUE.equals(promoResult.getApplied())) {
-            TrxSalesPromo newDataSalesPromo = TrxSalesPromo.builder()
-                    .salesId(dataSales.getId())
-                    .salesNo(dataSales.getSalesNo())
-                    .promoId(promoResult.getPromoId())
-                    .promoNo(promoResult.getPromoNo())
-                    .promoName(promoResult.getPromoName())
-                    .promoCode(promoResult.getPromoCode())
-                    .discountAmount(promoResult.getDiscountAmount())
-                    .promoSnapshot(promoResult.getPromoSnapshot())
-                    .createdBy(getCurrentUsername())
-                    .createdAt(now())
-                .build();
-
-            trxSalesPromoRepository.save(newDataSalesPromo);
+            trxSalesPromoRepository.save(
+                TrxSalesPromo.builder()
+                        .salesId(dataSales.getId())
+                        .salesNo(dataSales.getSalesNo())
+                        .promoId(promoResult.getPromoId())
+                        .promoNo(promoResult.getPromoNo())
+                        .promoName(promoResult.getPromoName())
+                        .promoCode(promoResult.getPromoCode())
+                        .discountAmount(promoResult.getDiscountAmount())
+                        .promoSnapshot(promoResult.getPromoSnapshot())
+                        .createdBy(getCurrentUsername())
+                        .createdAt(now())
+                    .build()
+            );
         }
 
         return buildEntityToResponse(dataSales);
@@ -327,52 +335,51 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     @Transactional
     @Override
     public PosSalesResponse settlePayment(String salesNo, PosSalesPaymentSettlementRequest request) {
-        validationPaymentRequest(request);
+        if (request.getPayments() == null || request.getPayments().isEmpty()) throw new IllegalArgumentException("Pembayaran tidak boleh kosong");
 
         TrxSales dataSales = trxSalesRepository.findBySalesNoForUpdate(salesNo).orElseThrow(() -> new IllegalArgumentException("Transaksi sales tidak ditemukan"));
 
         if (!SalesStatus.DRAFT.equals(dataSales.getStatus())) throw new IllegalArgumentException("Hanya transaksi DRAFT yang dapat dibayar");
-        if (dataSales.getDetails() == null || dataSales.getDetails().isEmpty()) throw new IllegalArgumentException("Detail transaksi penjualan tidak ditemukan");
 
-        BigDecimal paidAmount = FunctionUtil.calculatePaidAmount(request.getPayments());
+        BigDecimal paidAmount = request.getPayments().stream().map(PosSalesPaymentRequest::getPaidAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (paidAmount.compareTo(dataSales.getGrandTotal()) < 0) throw new IllegalArgumentException("Nominal pembayaran kurang dari grand total");
 
-        for (TrxSalesDetail dataDetail : dataSales.getDetails()) {
-            Product dataProduct = productRepository.findActiveProductForUpdate(dataDetail.getProduct().getId()).orElseThrow(() -> new IllegalArgumentException("Produk tidak ditemukan atau sudah tidak aktif"));
+        for (TrxSalesDetail detail : dataSales.getDetails()) {
+            Product product = productRepository.findActiveProductForUpdate(detail.getProduct().getId()).orElseThrow(() -> new IllegalArgumentException("Produk tidak ditemukan atau sudah tidak aktif"));
 
-            validationProductCanBeSold(dataProduct, dataDetail.getQty());
+            validationProductCanBeSold(product, detail.getQty());
 
-            Long qtyBefore = dataProduct.getStock();
-            Long qtyChange = dataDetail.getQty() * -1;
+            Long qtyBefore = product.getStock();
+            Long qtyChange = detail.getQty() * -1;
             Long qtyAfter = qtyBefore + qtyChange;
 
-            dataProduct.setStock(qtyAfter);
-            dataProduct.setUpdatedBy(getCurrentUsername());
-            dataProduct.setUpdatedAt(now());
-            productRepository.save(dataProduct);
+            product.setStock(qtyAfter);
+            product.setUpdatedBy(getCurrentUsername());
+            product.setUpdatedAt(now());
+            productRepository.save(product);
 
-            TrxStockMovement newDataStockMovement = TrxStockMovement.builder()
-                    .product(dataProduct)
-                    .movementType(StockMovementType.SALES_OUT)
-                    .qtyBefore(qtyBefore)
-                    .qtyChange(qtyChange)
-                    .qtyAfter(qtyAfter)
-                    .referenceNo(dataSales.getSalesNo())
-                    .notes("POS sales payment settlement " + dataSales.getSalesNo())
-                    .createdBy(getCurrentUsername())
-                    .createdAt(now())
-                    .externalReferenceNo(null)
-                .build();
-
-            trxStockMovementRepository.save(newDataStockMovement);
+            trxStockMovementRepository.save(
+                TrxStockMovement.builder()
+                        .product(product)
+                        .movementType(StockMovementType.SALES_OUT)
+                        .qtyBefore(qtyBefore)
+                        .qtyChange(qtyChange)
+                        .qtyAfter(qtyAfter)
+                        .referenceNo(dataSales.getSalesNo())
+                        .notes("POS sales payment settlement " + dataSales.getSalesNo())
+                        .createdBy(getCurrentUsername())
+                        .createdAt(now())
+                        .externalReferenceNo(null)
+                    .build()
+            );
         }
 
-        BigDecimal changeAmount = paidAmount.subtract(dataSales.getGrandTotal());
+        dataSales.getPayments().clear();
 
         List<TrxSalesPayment> payments = request.getPayments().stream()
             .map(p -> TrxSalesPayment.builder()
-                .sales(dataSales)
+                    .sales(dataSales)
                     .paymentMethod(p.getPaymentMethod())
                     .paymentStatus(PaymentStatus.PAID)
                     .paidAmount(p.getPaidAmount())
@@ -381,21 +388,20 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
                 .build())
             .toList();
 
-        dataSales.getPayments().clear();
         dataSales.getPayments().addAll(payments);
         dataSales.setPaidAmount(paidAmount);
-        dataSales.setChangeAmount(changeAmount);
+        dataSales.setChangeAmount(paidAmount.subtract(dataSales.getGrandTotal()));
         dataSales.setPaidAt(now());
         dataSales.setStatus(SalesStatus.PAID);
         dataSales.setUpdatedBy(getCurrentUsername());
         dataSales.setUpdatedAt(now());
 
-        TrxSales savedSales = trxSalesRepository.save(dataSales);
-        trxLoyaltyPointService.processEarnPoint(savedSales);
+        TrxSales saved = trxSalesRepository.save(dataSales);
 
-        updatePromoUsage(savedSales);
+        trxLoyaltyPointService.processEarnPoint(saved);
+        updatePromoUsage(saved);
 
-        return buildEntityToResponse(savedSales);
+        return buildEntityToResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -415,37 +421,38 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
     @Transactional
     @Override
     public PosSalesResponse cancelSales(Long id, PosSalesCancelRequest request) {
-        TrxSales data = trxSalesRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Transaksi penjualan tidak ditemukan"));
+        TrxSales data = trxSalesRepository.findByIdForUpdate(id).orElseThrow(() -> new EntityNotFoundException("Transaksi penjualan tidak ditemukan"));
 
-        if (SalesStatus.CANCELLED.equals(data.getStatus())) {
-            throw new IllegalArgumentException("Transaksi sudah dibatalkan");
-        }
-        
-    for (TrxSalesDetail dataDetail : data.getDetails()) {
-            Product dataProduct = dataDetail.getProduct();
+        if (SalesStatus.CANCELLED.equals(data.getStatus())) throw new IllegalArgumentException("Transaksi sudah dibatalkan");
 
-            Long qtyBefore = dataProduct.getStock();
-            Long qtyChange = dataDetail.getQty();
-            Long qtyAfter = qtyBefore + qtyChange;
+        if (SalesStatus.PAID.equals(data.getStatus())) {
+            for (TrxSalesDetail detail : data.getDetails()) {
+                Product product = productRepository.findActiveProductForUpdate(detail.getProduct().getId()).orElseThrow(() -> new IllegalArgumentException("Produk tidak ditemukan atau sudah tidak aktif"));
 
-            dataProduct.setStock(qtyAfter);
-            dataProduct.setUpdatedBy(getCurrentUsername());
-            dataProduct.setUpdatedAt(now());
-            productRepository.save(dataProduct);
+                Long qtyBefore = product.getStock();
+                Long qtyChange = detail.getQty();
+                Long qtyAfter = qtyBefore + qtyChange;
 
-            TrxStockMovement newDataStockMovement = TrxStockMovement.builder()
-                .product(dataProduct)
-                .movementType(StockMovementType.SALES_CANCEL_REVERSAL)
-                .qtyBefore(qtyBefore)
-                .qtyChange(qtyChange)
-                .qtyAfter(qtyAfter)
-                .referenceNo(data.getSalesNo())
-                .notes("Cancel POS sales transaction. Reason: " + request.getCancelReason())
-                .createdBy(getCurrentUsername())
-                .createdAt(now())
-                .externalReferenceNo(null)
-                .build();
-            trxStockMovementRepository.save(newDataStockMovement);
+                product.setStock(qtyAfter);
+                product.setUpdatedBy(getCurrentUsername());
+                product.setUpdatedAt(now());
+                productRepository.save(product);
+
+                trxStockMovementRepository.save(
+                    TrxStockMovement.builder()
+                            .product(product)
+                            .movementType(StockMovementType.SALES_CANCEL_REVERSAL)
+                            .qtyBefore(qtyBefore)
+                            .qtyChange(qtyChange)
+                            .qtyAfter(qtyAfter)
+                            .referenceNo(data.getSalesNo())
+                            .notes("Cancel POS sales transaction. Reason: " + request.getCancelReason())
+                            .createdBy(getCurrentUsername())
+                            .createdAt(now())
+                            .externalReferenceNo(null)
+                        .build()
+                );
+            }
         }
 
         trxLoyaltyPointService.reverseEarnPoint(data.getSalesNo());
@@ -455,9 +462,10 @@ public class PosSalesServiceImpl extends Services implements PosSalesService {
         data.setCancelledBy(getCurrentUsername());
         data.setCancelledAt(now());
         data.setCancelReason(request.getCancelReason());
-        
-        TrxSales dataSave = trxSalesRepository.save(data);
-        return buildEntityToResponse(dataSave);
+        data.setUpdatedBy(getCurrentUsername());
+        data.setUpdatedAt(now());
+
+        return buildEntityToResponse(trxSalesRepository.save(data));
     }
 
     @Transactional(readOnly = true)

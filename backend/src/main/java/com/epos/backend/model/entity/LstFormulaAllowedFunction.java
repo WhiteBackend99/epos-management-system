@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "mst_formula_allowed_function", schema = "public")
+@Table(name = "lst_formula_allowed_function", schema = "public")
 public class LstFormulaAllowedFunction {
 
     @Id

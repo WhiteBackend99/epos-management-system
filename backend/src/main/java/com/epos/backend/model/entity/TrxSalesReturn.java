@@ -89,6 +89,14 @@ public class TrxSalesReturn {
     @Column(name = "cancel_reason")
     private String cancelReason;
 
+    @Builder.Default
+    @Column(name = "loyalty_reverse_point", nullable = false)
+    private Long loyaltyReversePoint = 0L;
+
+    @Builder.Default
+    @Column(name = "loyalty_processed_flag", nullable = false)
+    private Boolean loyaltyProcessedFlag = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cashier_shift_id")
     private TrxCashierShift cashierShift;;

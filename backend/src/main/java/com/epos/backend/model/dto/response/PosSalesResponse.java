@@ -34,6 +34,7 @@ public class PosSalesResponse {
     private Long pointEarned;
     private Long pointRedeemed;
     private Boolean loyaltyProcessedFlag;
+    private Timestamp paidAt;
     private SalesStatus status;
     private String createdBy;
     private Timestamp createdAt;

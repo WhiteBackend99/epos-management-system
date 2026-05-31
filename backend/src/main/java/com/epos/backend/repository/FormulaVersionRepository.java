@@ -12,7 +12,7 @@ public interface FormulaVersionRepository extends JpaRepository<FormulaVersion, 
 
     @Query(value = """
             SELECT mfv.*
-            FROM ms_formula_version mfv
+            FROM mst_formula_version mfv
                 JOIN mst_formula mf ON mf.id = mfv.formula_id
             WHERE mf.formula_code = :formulaCode
                 AND mfv.active_flag = true

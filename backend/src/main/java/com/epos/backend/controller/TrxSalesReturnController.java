@@ -40,7 +40,7 @@ public class TrxSalesReturnController {
         type = AuditType.SALES_RETURN,
         action = AuditAction.CREATE
     )
-    @PostMapping(value = "/create-date")
+    @PostMapping(value = "/create-data")
     public ResponseEntity<ResponseData<TrxSalesReturnResponse>> createData(@Valid @RequestBody TrxSalesReturnRequest request) {
         ResponseData<TrxSalesReturnResponse> response = ResponseData.<TrxSalesReturnResponse> builder()
             .success(true)
@@ -87,7 +87,7 @@ public class TrxSalesReturnController {
         type = AuditType.SALES_RETURN,
         action = AuditAction.VIEW
     )
-    @GetMapping(value = "/search-data")
+    @PostMapping(value = "/search-data")
     public ResponseEntity<ResponseData<Page<TrxSalesReturnResponse>>> getDataByReturnNo(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestBody(required = false) TrxSalesReturnSearchRequest request) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 

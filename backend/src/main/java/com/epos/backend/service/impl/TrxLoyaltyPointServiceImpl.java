@@ -299,4 +299,47 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         customerMemberRepository.save(dataMember);
     }
 
+    @Transactional
+    @Override
+    public Long reverseEarnPointForReturn(String salesNo, String returnNo, BigDecimal returnAmount) {
+        TrxLoyaltyPointLedger earnLedger = trxLoyaltyPointLedgerRepository.findBySalesNoAndPointType(salesNo, LoyaltyPointType.EARN).orElse(null);
+
+        if (earnLedger == null) return 0L;
+        if (trxLoyaltyPointLedgerRepository.existsByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_REVERSE_EARN)) return 0L;
+
+        TrxSales sales = trxSalesRepository.findBySalesNoForUpdate(salesNo).orElseThrow(() -> new IllegalArgumentException("Transaksi sales tidak ditemukan"));
+
+        if (sales.getGrandTotal() == null || sales.getGrandTotal().compareTo(BigDecimal.ZERO) <= 0) return 0L;
+
+        CustomerMember member = customerMemberRepository.findByIdForUpdate(earnLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
+        BigDecimal ratio = returnAmount.divide(sales.getGrandTotal(), 6, RoundingMode.DOWN);
+
+        long reversePoint = BigDecimal.valueOf(Math.abs(earnLedger.getPointAmount())).multiply(ratio).setScale(0, RoundingMode.DOWN).longValue();
+
+        if (reversePoint <= 0) return 0L;
+
+        long beforeBalance = member.getTotalPoint();
+        long afterBalance = Math.max(0, beforeBalance - reversePoint);
+
+        trxLoyaltyPointLedgerRepository.save(
+            TrxLoyaltyPointLedger.builder()
+                    .customerMember(member)
+                    .salesNo(salesNo)
+                    .referenceNo(returnNo)
+                    .pointType(LoyaltyPointType.RETURN_REVERSE_EARN)
+                    .pointAmount(reversePoint * -1)
+                    .balanceBefore(beforeBalance)
+                    .balanceAfter(afterBalance)
+                    .description("Reverse earn point karena return " + returnNo)
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
+                .build()
+        );
+
+        member.setTotalPoint(afterBalance);
+        customerMemberRepository.save(member);
+
+        return reversePoint;
+    }
+
 }
