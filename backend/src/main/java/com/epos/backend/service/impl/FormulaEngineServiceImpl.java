@@ -16,8 +16,6 @@ import org.springframework.util.StringUtils;
 import com.epos.backend.model.dto.result.FormulaCalculationResult;
 import com.epos.backend.model.entity.Formula;
 import com.epos.backend.model.entity.FormulaVersion;
-import com.epos.backend.model.entity.LstFormulaAllowedFunction;
-import com.epos.backend.model.entity.LstFormulaVariable;
 import com.epos.backend.repository.FormulaRepository;
 import com.epos.backend.repository.FormulaVersionRepository;
 import com.epos.backend.repository.LstFormulaAllowedFunctionRepository;
@@ -40,20 +38,17 @@ public class FormulaEngineServiceImpl implements FormulaEngineService {
     private final LstFormulaAllowedFunctionRepository lstFormulaAllowedFunctionRepository;
 
     private void validationExpression(String expression, Map<String, BigDecimal> variables) {
-        if (!StringUtils.hasText(expression)) {
-            throw new IllegalArgumentException("Expression formula tidak boleh kosong");
-        }
+        if (!StringUtils.hasText(expression)) throw new IllegalArgumentException("Expression formula tidak boleh kosong");
 
         String lowerExpression = expression.toLowerCase();
-
         if (lowerExpression.contains(";") || lowerExpression.contains("runtime") || lowerExpression.contains("class") || 
             lowerExpression.contains("system") || lowerExpression.contains("exec") || lowerExpression.contains("script") ||
             lowerExpression.contains("java") ) {
             throw new IllegalArgumentException("Expression formula tidak valid");
         }
 
-        Set<String> allowedVariables = lstFormulaVariableRepository.findByActiveFlagTrue().stream().map(LstFormulaVariable::getVariableCode).collect(Collectors.toSet());
-        Set<String> allowedFunctions = lstFormulaAllowedFunctionRepository.findByActiveFlagTrue().stream().map(LstFormulaAllowedFunction::getFunctionCode).collect(Collectors.toSet());
+        Set<String> allowedVariables = lstFormulaVariableRepository.findByActiveFlagTrue().stream().map(data -> data.getVariableCode().toUpperCase().trim()).collect(Collectors.toSet());
+        Set<String> allowedFunctions = lstFormulaAllowedFunctionRepository.findByActiveFlagTrue().stream().map(data -> data.getFunctionCode().toUpperCase().trim()).collect(Collectors.toSet());
 
         for (String variable : variables.keySet()) {
             if (!allowedVariables.contains(variable)) {
@@ -65,13 +60,11 @@ public class FormulaEngineServiceImpl implements FormulaEngineService {
         Matcher matcher = tokenPattern.matcher(expression);
 
         while (matcher.find()) {
-            String token = matcher.group();
+            String token = matcher.group().trim().toUpperCase();
             boolean isVariable = variables.containsKey(token);
             boolean isFunction = allowedFunctions.contains(token);
 
-            if (!isVariable && !isFunction) {
-                throw new IllegalArgumentException("Token formula tidak valid: " + token);
-            }
+            if (!isVariable && !isFunction) throw new IllegalArgumentException("Token formula tidak valid: " + token);
         }
     }
 
@@ -124,25 +117,24 @@ public class FormulaEngineServiceImpl implements FormulaEngineService {
         validationExpression(dataFormulaVersion.getExpression(), variables);
 
         Set<String> variableNames = variables.keySet();
-
         Expression expression = new ExpressionBuilder(dataFormulaVersion.getExpression())
             .variables(variableNames)
             .functions(getAllowedFunctions())
             .build();
 
-        variables.forEach((key, value) -> expression.setVariable(key, value.doubleValue()));
+        variables.forEach((key, value) -> expression.setVariable(key.trim().toUpperCase(), value.doubleValue()));
         BigDecimal result = BigDecimal.valueOf(expression.evaluate());
 
         Map<String, Object> context = new HashMap<>();
         variables.forEach(context::put);
 
         return FormulaCalculationResult.builder()
-            .formulaId(dataFormula.getId())
-            .formulaVersionId(dataFormulaVersion.getId())
-            .formulaCode(formulaCode)
-            .expression(dataFormulaVersion.getExpression())
-            .context(context)
-            .result(result)
+                .formulaId(dataFormula.getId())
+                .formulaVersionId(dataFormulaVersion.getId())
+                .formulaCode(formulaCode)
+                .expression(dataFormulaVersion.getExpression())
+                .context(context)
+                .result(result)
             .build();
     }
 

@@ -11,7 +11,8 @@ import com.epos.backend.model.entity.TrxLoyaltyPointLedger;
 public interface TrxLoyaltyPointLedgerRepository extends JpaRepository<TrxLoyaltyPointLedger, Long>, JpaSpecificationExecutor<TrxLoyaltyPointLedger> {
 
     public boolean existsBySalesNoAndPointType(String salesNo, LoyaltyPointType pointType);
-    boolean existsByReferenceNoAndPointType(String referenceNo, LoyaltyPointType pointType);
+    public boolean existsByReferenceNoAndPointType(String referenceNo, LoyaltyPointType pointType);
     public Optional<TrxLoyaltyPointLedger> findBySalesNoAndPointType(String salesNo, LoyaltyPointType pointType);
-
+    public Optional<TrxLoyaltyPointLedger> findByReferenceNoAndPointType(String referenceNo, LoyaltyPointType pointType);
+    
 }

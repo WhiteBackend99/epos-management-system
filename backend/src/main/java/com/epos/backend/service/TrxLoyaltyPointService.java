@@ -12,6 +12,7 @@ public interface TrxLoyaltyPointService {
     public void processEarnPoint(TrxSales dataSales);
     public void reverseEarnPoint(String salesNo);
     public void reverseRedeemPoint(String salesNo);
+    public void restoreEarnPointForCancelledReturn(String salesNo, String returnNo);
     public Long reverseEarnPointForReturn(String salesNo, String returnNo, BigDecimal returnAmount);
 
 }

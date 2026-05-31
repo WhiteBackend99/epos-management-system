@@ -305,6 +305,7 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         TrxLoyaltyPointLedger earnLedger = trxLoyaltyPointLedgerRepository.findBySalesNoAndPointType(salesNo, LoyaltyPointType.EARN).orElse(null);
 
         if (earnLedger == null) return 0L;
+
         if (trxLoyaltyPointLedgerRepository.existsByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_REVERSE_EARN)) return 0L;
 
         TrxSales sales = trxSalesRepository.findBySalesNoForUpdate(salesNo).orElseThrow(() -> new IllegalArgumentException("Transaksi sales tidak ditemukan"));
@@ -313,7 +314,6 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
 
         CustomerMember member = customerMemberRepository.findByIdForUpdate(earnLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
         BigDecimal ratio = returnAmount.divide(sales.getGrandTotal(), 6, RoundingMode.DOWN);
-
         long reversePoint = BigDecimal.valueOf(Math.abs(earnLedger.getPointAmount())).multiply(ratio).setScale(0, RoundingMode.DOWN).longValue();
 
         if (reversePoint <= 0) return 0L;
@@ -340,6 +340,38 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
         customerMemberRepository.save(member);
 
         return reversePoint;
+    }
+
+    @Transactional
+    @Override
+    public void restoreEarnPointForCancelledReturn(String salesNo, String returnNo) {
+        TrxLoyaltyPointLedger returnReverseLedger = trxLoyaltyPointLedgerRepository.findByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_REVERSE_EARN).orElse(null);
+
+        if (returnReverseLedger == null) return;
+        if (trxLoyaltyPointLedgerRepository.existsByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_RESTORE_REDEEM)) return;
+
+        CustomerMember member = customerMemberRepository.findByIdForUpdate(returnReverseLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
+        long restorePoint = Math.abs(returnReverseLedger.getPointAmount());
+        long beforeBalance = member.getTotalPoint();
+        long afterBalance = beforeBalance + restorePoint;
+
+        trxLoyaltyPointLedgerRepository.save(
+            TrxLoyaltyPointLedger.builder()
+                    .customerMember(member)
+                    .salesNo(salesNo)
+                    .referenceNo(returnNo)
+                    .pointType(LoyaltyPointType.RETURN_RESTORE_REDEEM)
+                    .pointAmount(restorePoint)
+                    .balanceBefore(beforeBalance)
+                    .balanceAfter(afterBalance)
+                    .description("Restore point karena return dibatalkan " + returnNo)
+                    .createdBy(getCurrentUsername())
+                    .createdAt(now())
+                .build()
+        );
+
+        member.setTotalPoint(afterBalance);
+        customerMemberRepository.save(member);
     }
 
 }

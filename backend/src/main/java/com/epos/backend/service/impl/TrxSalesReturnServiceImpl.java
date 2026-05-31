@@ -75,6 +75,8 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
             .cancelledBy(data.getCancelledBy())
             .cancelledAt(data.getCancelledAt())
             .cancelReason(data.getCancelReason())
+            .loyaltyReversePoint(data.getLoyaltyReversePoint())
+            .loyaltyProcessedFlag(data.getLoyaltyProcessedFlag())
             .details(data.getDetails().stream().map(d -> buildEntityToResponseDetail(d)).toList())
             .refundPayments(data.getRefundPayments().stream().map(rp -> buildEntityToResponseRefundPayment(rp)).toList())
             .build();
@@ -222,6 +224,11 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
         }
 
         newData.setTotalReturnAmount(totalReturnAmount);
+
+        Long reversePoint = trxLoyaltyPointService.reverseEarnPointForReturn(dataSales.getSalesNo(), newData.getReturnNo(), totalReturnAmount);
+        newData.setLoyaltyReversePoint(reversePoint);
+        newData.setLoyaltyProcessedFlag(reversePoint > 0);
+
         if (Boolean.TRUE.equals(request.getRefund())) {
             validationRefundRequest(request);
 
@@ -241,10 +248,6 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
             newData.setRefundAmount(BigDecimal.ZERO);
             newData.setRefundStatus(RefundStatus.NO_REFUND);
         }
-
-        Long reversePoint = trxLoyaltyPointService.reverseEarnPointForReturn(dataSales.getSalesNo(), newData.getReturnNo(), totalReturnAmount);
-        newData.setLoyaltyReversePoint(reversePoint);
-        newData.setLoyaltyProcessedFlag(reversePoint > 0);
 
         TrxSalesReturn dataSaved = trxSalesReturnRepository.save(newData);
         return buildEntityToResponse(dataSaved);
@@ -314,6 +317,8 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
                 dataRefundPayment.setRefundStatus(RefundStatus.REFUND_CANCELLED);
             }
         }
+
+        trxLoyaltyPointService.restoreEarnPointForCancelledReturn(data.getSalesNo(), data.getReturnNo());
 
         TrxSalesReturn dataSaved = trxSalesReturnRepository.save(data);
         return buildEntityToResponse(dataSaved);

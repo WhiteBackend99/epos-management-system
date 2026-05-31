@@ -73,19 +73,13 @@ public class AuditLogAspect {
     }
 
     private String getClientIp(HttpServletRequest servletRequest) {
-        if (servletRequest == null) {
-            return null;
-        }
+        if (servletRequest == null) return null;
 
-        String xForwardedFor = servletRequest.getHeader("X-Forwarded=For");
-        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
-        }
+        String xForwardedFor = servletRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) return xForwardedFor.split(",")[0].trim();
 
         String xRealIp = servletRequest.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isBlank()) {
-            return xRealIp.trim();
-        }
+        if (xRealIp != null && !xRealIp.isBlank()) return xRealIp.trim();
 
         return servletRequest.getRemoteAddr();
     }

@@ -34,6 +34,8 @@ public class TrxSalesReturnResponse {
     private String cancelledBy;
     private Timestamp cancelledAt;
     private String cancelReason;
+    private Long loyaltyReversePoint;
+    private Boolean loyaltyProcessedFlag;
 
     private List<TrxSalesReturnDetailResponse> details;
     private List<TrxSalesReturnRefundPaymentResponse> refundPayments;

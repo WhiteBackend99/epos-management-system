@@ -22,4 +22,10 @@ public class TrxSalesReturnSearchRequest {
     private Date startDate;
     private Date endDate;
 
+    @Builder.Default
+    private int page = 0;
+
+    @Builder.Default
+    private int size = 10;
+
 }

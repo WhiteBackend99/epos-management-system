@@ -1,7 +1,6 @@
 package com.epos.backend.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.epos.backend.annotation.AuditLog;
@@ -28,7 +27,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
 @RestController
 @RequestMapping("/api/sales-returns")
 @RequiredArgsConstructor
@@ -43,10 +41,10 @@ public class TrxSalesReturnController {
     @PostMapping(value = "/create-data")
     public ResponseEntity<ResponseData<TrxSalesReturnResponse>> createData(@Valid @RequestBody TrxSalesReturnRequest request) {
         ResponseData<TrxSalesReturnResponse> response = ResponseData.<TrxSalesReturnResponse> builder()
-            .success(true)
-            .code(HttpStatus.OK.value())
-            .message("Pengembalian penjualan berhasil dibuat")
-            .data(trxSalesReturnService.createReturn(request))
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Pengembalian penjualan berhasil dibuat")
+                .data(trxSalesReturnService.createReturn(request))
             .build();
         return ResponseEntity.ok(response);
     }
@@ -59,10 +57,10 @@ public class TrxSalesReturnController {
     @GetMapping(value = "/get-data/{id}")
     public ResponseEntity<ResponseData<TrxSalesReturnResponse>> getDataById(@PathVariable Long id) {
         ResponseData<TrxSalesReturnResponse> response = ResponseData.<TrxSalesReturnResponse> builder()
-            .success(true)
-            .code(HttpStatus.OK.value())
-            .message("Detail pengembalian penjualan berhasil ditemukan")
-            .data(trxSalesReturnService.getDataById(id))
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Detail pengembalian penjualan berhasil ditemukan")
+                .data(trxSalesReturnService.getDataById(id))
             .build();
         return ResponseEntity.ok(response);
     }
@@ -75,10 +73,10 @@ public class TrxSalesReturnController {
     @GetMapping(value = "/get-data-number/{returnNo}")
     public ResponseEntity<ResponseData<TrxSalesReturnResponse>> getDataByReturnNo(@PathVariable String returnNo) {
         ResponseData<TrxSalesReturnResponse> response = ResponseData.<TrxSalesReturnResponse> builder()
-            .success(true)
-            .code(HttpStatus.OK.value())
-            .message("Detail pengembalian penjualan berhasil ditemukan")
-            .data(trxSalesReturnService.getByReturnNo(returnNo))
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Detail pengembalian penjualan berhasil ditemukan")
+                .data(trxSalesReturnService.getByReturnNo(returnNo))
             .build();
         return ResponseEntity.ok(response);
     }
@@ -88,14 +86,15 @@ public class TrxSalesReturnController {
         action = AuditAction.VIEW
     )
     @PostMapping(value = "/search-data")
-    public ResponseEntity<ResponseData<Page<TrxSalesReturnResponse>>> getDataByReturnNo(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size, @RequestBody(required = false) TrxSalesReturnSearchRequest request) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public ResponseEntity<ResponseData<Page<TrxSalesReturnResponse>>> getDataByReturnNo(@RequestBody(required = false) TrxSalesReturnSearchRequest request) {
+        TrxSalesReturnSearchRequest searchRequest = request == null ? new TrxSalesReturnSearchRequest() : request;
+        PageRequest pageable = PageRequest.of(request.getPage(), request.getSize(), Sort.by(Sort.Direction.DESC, "createdAt"));
 
         ResponseData<Page<TrxSalesReturnResponse>> response = ResponseData.<Page<TrxSalesReturnResponse>> builder()
-            .success(true)
-            .code(HttpStatus.OK.value())
-            .message("Data pengembalian penjualan berhasil ditemukan")
-            .data(trxSalesReturnService.searchData(pageable, request))
+                .success(true)
+                .code(HttpStatus.OK.value())
+                .message("Data pengembalian penjualan berhasil ditemukan")
+                .data(trxSalesReturnService.searchData(pageable, searchRequest))
             .build();
         return ResponseEntity.ok(response);
     }
