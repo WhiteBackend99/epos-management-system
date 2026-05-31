@@ -26,6 +26,8 @@ public class TrxSalesReturnResponse {
     private String customerName;
     private BigDecimal totalReturnAmount;
     private BigDecimal refundAmount;
+    private Long loyaltyReversePoint;
+    private Boolean loyaltyProcessedFlag;
     private SalesReturnStatus returnStatus;
     private RefundStatus refundStatus;
     private String returnReason;
@@ -34,12 +36,10 @@ public class TrxSalesReturnResponse {
     private String cancelledBy;
     private Timestamp cancelledAt;
     private String cancelReason;
-    private Long loyaltyReversePoint;
-    private Boolean loyaltyProcessedFlag;
 
     private List<TrxSalesReturnDetailResponse> details;
     private List<TrxSalesReturnRefundPaymentResponse> refundPayments;
-    
+
     @Data
     @Builder
     @NoArgsConstructor
@@ -53,7 +53,6 @@ public class TrxSalesReturnResponse {
         private Long qtySold;
         private Long qtyReturn;
         private BigDecimal subtotalReturn;
-
     }
 
     @Data

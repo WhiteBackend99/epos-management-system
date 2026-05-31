@@ -162,8 +162,8 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
     @Transactional
     @Override
     public void processEarnPoint(TrxSales dataSales) {
-        if (!SalesStatus.PAID.equals(dataSales.getStatus())) return;
         if (dataSales == null || dataSales.getCustomerMember() == null) return;
+        if (!SalesStatus.PAID.equals(dataSales.getStatus())) return;
         if (Boolean.TRUE.equals(dataSales.getLoyaltyProcessedFlag())) return;
         if (trxLoyaltyPointLedgerRepository.existsBySalesNoAndPointType(dataSales.getSalesNo(), LoyaltyPointType.EARN)) return;
 
@@ -345,33 +345,36 @@ public class TrxLoyaltyPointServiceImpl extends Services implements TrxLoyaltyPo
     @Transactional
     @Override
     public void restoreEarnPointForCancelledReturn(String salesNo, String returnNo) {
-        TrxLoyaltyPointLedger returnReverseLedger = trxLoyaltyPointLedgerRepository.findByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_REVERSE_EARN).orElse(null);
+        TrxLoyaltyPointLedger dataReturnReverseLedger = trxLoyaltyPointLedgerRepository.findByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_REVERSE_EARN).orElse(null);
 
-        if (returnReverseLedger == null) return;
-        if (trxLoyaltyPointLedgerRepository.existsByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_RESTORE_REDEEM)) return;
+        if (dataReturnReverseLedger == null) return;
+        if (trxLoyaltyPointLedgerRepository.existsByReferenceNoAndPointType(returnNo, LoyaltyPointType.RETURN_RESTORE_EARN)) return;
 
-        CustomerMember member = customerMemberRepository.findByIdForUpdate(returnReverseLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
-        long restorePoint = Math.abs(returnReverseLedger.getPointAmount());
-        long beforeBalance = member.getTotalPoint();
-        long afterBalance = beforeBalance + restorePoint;
+        CustomerMember dataMember = customerMemberRepository.findByIdForUpdate(dataReturnReverseLedger.getCustomerMember().getId()).orElseThrow(() -> new IllegalArgumentException("Member tidak ditemukan"));
+        Long restorePoint = Math.abs(dataReturnReverseLedger.getPointAmount());
+
+        if (restorePoint <= 0) return;
+
+        Long beforeBalance = dataMember.getTotalPoint();
+        Long afterBalance = beforeBalance + restorePoint;
 
         trxLoyaltyPointLedgerRepository.save(
             TrxLoyaltyPointLedger.builder()
-                    .customerMember(member)
+                    .customerMember(dataMember)
                     .salesNo(salesNo)
                     .referenceNo(returnNo)
-                    .pointType(LoyaltyPointType.RETURN_RESTORE_REDEEM)
+                    .pointType(LoyaltyPointType.RETURN_RESTORE_EARN)
                     .pointAmount(restorePoint)
                     .balanceBefore(beforeBalance)
                     .balanceAfter(afterBalance)
-                    .description("Restore point karena return dibatalkan " + returnNo)
+                    .description("Restore earn point karena return dibatalkan " + returnNo)
                     .createdBy(getCurrentUsername())
                     .createdAt(now())
                 .build()
         );
 
-        member.setTotalPoint(afterBalance);
-        customerMemberRepository.save(member);
+        dataMember.setTotalPoint(afterBalance);
+        customerMemberRepository.save(dataMember);
     }
 
 }

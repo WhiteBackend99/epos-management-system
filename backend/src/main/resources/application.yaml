@@ -12,6 +12,14 @@ app:
   jwt:
     secret-key: EPOS_MANAGEMENT_SYSTEM_SECRET_KEY_1234567890_!@#$%^&*()_+
     expiration: 86400000
+  cors:
+    allowed-origins: app.cors.allowed-origins=http://localhost:3000,http://localhost:5173,http://localhost:8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
 
 ---
 spring:

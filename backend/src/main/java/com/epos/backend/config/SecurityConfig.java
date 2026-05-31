@@ -31,7 +31,7 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
 
-    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
+    @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:8080}")
     private List<String> allowedOrigins;
 
     @Bean
@@ -47,10 +47,17 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
                     .requestMatchers("/api/reports/**").hasAnyRole("ADMIN", "OWNER", "MANAGER")
                     .requestMatchers("/api/promos/**").hasAnyRole("ADMIN", "OWNER", "MANAGER")
-                    .requestMatchers("/api/customer-members/**").hasAnyRole("ADMIN", "OWNER", "CASHIER", "MANAGER")
-                    .requestMatchers("/api/loyalty/**").hasAnyRole("ADMIN", "OWNER", "CASHIER", "MANAGER")
+                    .requestMatchers("/api/categories/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "WAREHOUSE")
+                    .requestMatchers("/api/products/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "WAREHOUSE")
+                    .requestMatchers("/api/suppliers/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "WAREHOUSE")
+                    .requestMatchers("/api/purchases/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "WAREHOUSE")
+                    .requestMatchers("/api/stock-movements/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "WAREHOUSE")
+                    .requestMatchers("/api/customer-members/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "CASHIER")
+                    .requestMatchers("/api/loyalty/**").hasAnyRole("ADMIN", "OWNER", "MANAGER", "CASHIER")
                     .requestMatchers("/api/pos-sales/**").hasAnyRole("ADMIN", "OWNER", "CASHIER")
                     .requestMatchers("/api/sales-returns/**").hasAnyRole("ADMIN", "OWNER", "CASHIER")
+                    .requestMatchers("/api/receipts/**").hasAnyRole("ADMIN", "OWNER", "CASHIER")
+                    .requestMatchers("/api/cashier-shifts/**").hasAnyRole("ADMIN", "OWNER", "CASHIER")
                     .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

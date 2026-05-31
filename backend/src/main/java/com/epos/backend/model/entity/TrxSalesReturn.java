@@ -2,6 +2,7 @@ package com.epos.backend.model.entity;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.epos.backend.enums.RefundStatus;
@@ -51,11 +52,13 @@ public class TrxSalesReturn {
     @Column(name = "customer_name")
     private String customerName;
 
+    @Builder.Default
     @Column(name = "total_return_amount", precision = 18, scale = 2, nullable = false)
-    private BigDecimal totalReturnAmount;
+    private BigDecimal totalReturnAmount = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "refund_amount", precision = 18, scale = 2, nullable = false)
-    private BigDecimal refundAmount;
+    private BigDecimal refundAmount = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "return_status", nullable = false)
@@ -70,7 +73,7 @@ public class TrxSalesReturn {
 
     @Column(name = "created_by", nullable = false)
     private String createdBy;
-    
+
     @Column(name = "created_at", nullable = false)
     private Timestamp createdAt;
 
@@ -99,12 +102,14 @@ public class TrxSalesReturn {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cashier_shift_id")
-    private TrxCashierShift cashierShift;;
+    private TrxCashierShift cashierShift;
 
+    @Builder.Default
     @OneToMany(mappedBy = "salesReturn", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TrxSalesReturnDetail> details;
+    private List<TrxSalesReturnDetail> details = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "salesReturn", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<TrxSalesRefundPayment> refundPayments;
+    private List<TrxSalesRefundPayment> refundPayments = new ArrayList<>();
 
 }

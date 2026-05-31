@@ -60,25 +60,25 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
 
     private TrxSalesReturnResponse buildEntityToResponse(TrxSalesReturn data) {
         return TrxSalesReturnResponse.builder()
-            .id(data.getId())
-            .returnNo(data.getReturnNo())
-            .salesId(data.getSales().getId())
-            .salesNo(data.getSalesNo())
-            .customerName(data.getCustomerName())
-            .totalReturnAmount(data.getTotalReturnAmount())
-            .refundAmount(data.getRefundAmount())
-            .returnStatus(data.getReturnStatus())
-            .refundStatus(data.getRefundStatus())
-            .returnReason(data.getReturnReason())
-            .createdBy(data.getCreatedBy())
-            .createdAt(data.getCreatedAt())
-            .cancelledBy(data.getCancelledBy())
-            .cancelledAt(data.getCancelledAt())
-            .cancelReason(data.getCancelReason())
-            .loyaltyReversePoint(data.getLoyaltyReversePoint())
-            .loyaltyProcessedFlag(data.getLoyaltyProcessedFlag())
-            .details(data.getDetails().stream().map(d -> buildEntityToResponseDetail(d)).toList())
-            .refundPayments(data.getRefundPayments().stream().map(rp -> buildEntityToResponseRefundPayment(rp)).toList())
+                .id(data.getId())
+                .returnNo(data.getReturnNo())
+                .salesId(data.getSales().getId())
+                .salesNo(data.getSalesNo())
+                .customerName(data.getCustomerName())
+                .totalReturnAmount(data.getTotalReturnAmount())
+                .refundAmount(data.getRefundAmount())
+                .loyaltyReversePoint(data.getLoyaltyReversePoint())
+                .loyaltyProcessedFlag(data.getLoyaltyProcessedFlag())
+                .returnStatus(data.getReturnStatus())
+                .refundStatus(data.getRefundStatus())
+                .returnReason(data.getReturnReason())
+                .createdBy(data.getCreatedBy())
+                .createdAt(data.getCreatedAt())
+                .cancelledBy(data.getCancelledBy())
+                .cancelledAt(data.getCancelledAt())
+                .cancelReason(data.getCancelReason())
+                .details(data.getDetails().stream().map(this::buildEntityToResponseDetail).toList())
+                .refundPayments(data.getRefundPayments().stream().map(this::buildEntityToResponseRefundPayment).toList())
             .build();
     }
 
@@ -319,6 +319,19 @@ public class TrxSalesReturnServiceImpl extends Services implements TrxSalesRetur
         }
 
         trxLoyaltyPointService.restoreEarnPointForCancelledReturn(data.getSalesNo(), data.getReturnNo());
+
+        data.setReturnStatus(SalesReturnStatus.CANCELLED);
+        data.setCancelledBy(getCurrentUsername());
+        data.setCancelledAt(now());
+        data.setCancelReason(request.getCancelReason());
+
+        if (RefundStatus.REFUNDED.equals(data.getRefundStatus())) {
+            data.setRefundStatus(RefundStatus.REFUND_CANCELLED);
+
+            for (TrxSalesRefundPayment dataRefundPayment : data.getRefundPayments()) {
+                dataRefundPayment.setRefundStatus(RefundStatus.REFUND_CANCELLED);
+            }
+        }
 
         TrxSalesReturn dataSaved = trxSalesReturnRepository.save(data);
         return buildEntityToResponse(dataSaved);

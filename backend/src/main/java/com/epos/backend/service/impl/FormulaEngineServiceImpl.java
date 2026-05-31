@@ -13,9 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.epos.backend.exception.BusinessException;
 import com.epos.backend.model.dto.result.FormulaCalculationResult;
 import com.epos.backend.model.entity.Formula;
 import com.epos.backend.model.entity.FormulaVersion;
+import com.epos.backend.model.entity.LstFormulaAllowedFunction;
+import com.epos.backend.model.entity.LstFormulaVariable;
 import com.epos.backend.repository.FormulaRepository;
 import com.epos.backend.repository.FormulaVersionRepository;
 import com.epos.backend.repository.LstFormulaAllowedFunctionRepository;
@@ -37,34 +40,52 @@ public class FormulaEngineServiceImpl implements FormulaEngineService {
     private final LstFormulaVariableRepository lstFormulaVariableRepository;
     private final LstFormulaAllowedFunctionRepository lstFormulaAllowedFunctionRepository;
 
+    private Map<String, BigDecimal> normalizeVariables(Map<String, BigDecimal> variables) {
+        Map<String, BigDecimal> normalized = new HashMap<>();
+        if (variables == null || variables.isEmpty()) return normalized;
+
+        variables.forEach((key, value) -> {
+            if (!StringUtils.hasText(key)) throw new BusinessException("Variable formula tidak valid");
+            if (value == null) throw new BusinessException("Nilai variable formula tidak boleh kosong: " + key);
+
+            normalized.put(key.trim().toUpperCase(), value);
+        });
+
+        return normalized;
+    }
+
     private void validationExpression(String expression, Map<String, BigDecimal> variables) {
-        if (!StringUtils.hasText(expression)) throw new IllegalArgumentException("Expression formula tidak boleh kosong");
+        if (!StringUtils.hasText(expression)) throw new BusinessException("Expression formula tidak boleh kosong");
 
         String lowerExpression = expression.toLowerCase();
-        if (lowerExpression.contains(";") || lowerExpression.contains("runtime") || lowerExpression.contains("class") || 
-            lowerExpression.contains("system") || lowerExpression.contains("exec") || lowerExpression.contains("script") ||
-            lowerExpression.contains("java") ) {
-            throw new IllegalArgumentException("Expression formula tidak valid");
-        }
+        if ( lowerExpression.contains(";") 
+            || lowerExpression.contains("runtime") 
+            || lowerExpression.contains("class") 
+            || lowerExpression.contains("system") 
+            || lowerExpression.contains("exec") 
+            || lowerExpression.contains("script") 
+            || lowerExpression.contains("java") 
+            || lowerExpression.contains("reflect") 
+            || lowerExpression.contains("import") 
+            || lowerExpression.contains("new ") ) throw new BusinessException("Expression formula tidak valid");
 
-        Set<String> allowedVariables = lstFormulaVariableRepository.findByActiveFlagTrue().stream().map(data -> data.getVariableCode().toUpperCase().trim()).collect(Collectors.toSet());
-        Set<String> allowedFunctions = lstFormulaAllowedFunctionRepository.findByActiveFlagTrue().stream().map(data -> data.getFunctionCode().toUpperCase().trim()).collect(Collectors.toSet());
+        Set<String> allowedVariables = lstFormulaVariableRepository.findByActiveFlagTrue().stream().map(LstFormulaVariable::getVariableCode).filter(StringUtils::hasText).map(value -> value.trim().toUpperCase()).collect(Collectors.toSet());
+        Set<String> allowedFunctions = lstFormulaAllowedFunctionRepository.findByActiveFlagTrue().stream().map(LstFormulaAllowedFunction::getFunctionCode).filter(StringUtils::hasText).map(value -> value.trim().toUpperCase()).collect(Collectors.toSet());
 
         for (String variable : variables.keySet()) {
-            if (!allowedVariables.contains(variable)) {
-                throw new IllegalArgumentException("Variable formula tidak terdaftar: " + variable);
-            }
+            String normalizedVariable = variable.trim().toUpperCase();
+            if (!allowedVariables.contains(normalizedVariable)) throw new BusinessException("Variable formula tidak terdaftar: " + normalizedVariable);
         }
 
         Pattern tokenPattern = Pattern.compile("\\b[A-Z_][A-Z0-9_]*\\b");
-        Matcher matcher = tokenPattern.matcher(expression);
+        Matcher matcher = tokenPattern.matcher(expression.toUpperCase());
 
         while (matcher.find()) {
             String token = matcher.group().trim().toUpperCase();
             boolean isVariable = variables.containsKey(token);
             boolean isFunction = allowedFunctions.contains(token);
 
-            if (!isVariable && !isFunction) throw new IllegalArgumentException("Token formula tidak valid: " + token);
+            if (!isVariable && !isFunction) throw new BusinessException("Token formula tidak valid: " + token);
         }
     }
 
@@ -111,22 +132,21 @@ public class FormulaEngineServiceImpl implements FormulaEngineService {
 
     @Override
     public FormulaCalculationResult evaluate(String formulaCode, Map<String, BigDecimal> variables) {
-        Formula dataFormula = formulaRepository.findByFormulaCodeAndActiveFlagTrue(formulaCode).orElseThrow(() -> new IllegalArgumentException("Formula tidak ditemukan"));
-        FormulaVersion dataFormulaVersion = formulaVersionRepository.findActiveVersion(formulaCode).orElseThrow(() -> new IllegalArgumentException("Versi formula aktif tidak ditemukan"));
+        Formula dataFormula = formulaRepository.findByFormulaCodeAndActiveFlagTrue(formulaCode).orElseThrow(() -> new BusinessException("Formula tidak ditemukan"));
+        FormulaVersion dataFormulaVersion = formulaVersionRepository.findActiveVersion(formulaCode).orElseThrow(() -> new BusinessException("Versi formula aktif tidak ditemukan"));
 
-        validationExpression(dataFormulaVersion.getExpression(), variables);
+        Map<String, BigDecimal> normalizedVariables = normalizeVariables(variables);
 
-        Set<String> variableNames = variables.keySet();
-        Expression expression = new ExpressionBuilder(dataFormulaVersion.getExpression())
-            .variables(variableNames)
-            .functions(getAllowedFunctions())
-            .build();
+        validationExpression(dataFormulaVersion.getExpression(), normalizedVariables);
 
-        variables.forEach((key, value) -> expression.setVariable(key.trim().toUpperCase(), value.doubleValue()));
+        Expression expression = new ExpressionBuilder(dataFormulaVersion.getExpression()).variables(normalizedVariables.keySet()).functions(getAllowedFunctions()).build();
+
+        normalizedVariables.forEach((key, value) -> expression.setVariable(key, value.doubleValue()));
+
         BigDecimal result = BigDecimal.valueOf(expression.evaluate());
 
         Map<String, Object> context = new HashMap<>();
-        variables.forEach(context::put);
+        normalizedVariables.forEach(context::put);
 
         return FormulaCalculationResult.builder()
                 .formulaId(dataFormula.getId())
