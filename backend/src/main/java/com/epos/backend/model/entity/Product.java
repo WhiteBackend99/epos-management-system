@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -29,6 +30,7 @@ public class Product extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -53,17 +55,21 @@ public class Product extends BaseEntity {
     @Column(name = "selling_price", precision = 18, scale = 2)
     private BigDecimal sellingPrice;
 
-    @Column(name = "stock")
-    private Long stock;
+    @Builder.Default
+    @Column(name = "stock", nullable = false)
+    private Long stock = 0L;
 
-    @Column(name = "min_stock")
-    private Long minStock;
+    @Builder.Default
+    @Column(name = "min_stock", nullable = false)
+    private Long minStock = 0L;
 
-    @Column(name = "is_active")
-    private Boolean isActive;
+    @Builder.Default
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
-    @Column(name = "is_deleted")
-    private Boolean isDeleted;
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
 
     @Column(name = "deleted_by")
     private String deletedBy;

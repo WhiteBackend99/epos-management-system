@@ -34,30 +34,29 @@ public class PromoResponse {
     private Long currentUsage;
     private Long maxUsagePerCustomer;
     private String description;
+    private Boolean isActive;
 
     private List<PromoRuleResponse> rules;
     private List<PromoRewardResponse> rewards;
-    
+
     @Data
     @Builder
     public static class PromoRuleResponse {
-        
+
         private Long id;
         private PromoRuleType ruleType;
         private PromoOperator operator;
         private Map<String, Object> ruleValue;
-        
     }
 
     @Data
     @Builder
     public static class PromoRewardResponse {
-        
+
         private Long id;
         private PromoRewardType rewardType;
         private BigDecimal rewardValue;
         private BigDecimal maxDiscountAmount;
-        
     }
     
 }

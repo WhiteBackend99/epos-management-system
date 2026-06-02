@@ -18,21 +18,30 @@ import jakarta.persistence.LockModeType;
 
 public interface PromoRepository extends JpaRepository<Promo, Long>, JpaSpecificationExecutor<Promo> {
 
-    public Optional<Promo> findByPromoNo(String promoNo);
-    public Optional<Promo> findByPromoCodeAndStatus(String promoCode, PromoStatus status);
-    
+    public Optional<Promo> findByPromoNoAndIsDeletedFalse(String promoNo);
+    public Optional<Promo> findByPromoCodeAndStatusAndIsDeletedFalse(String promoCode, PromoStatus status);
+    public boolean existsByPromoCodeIgnoreCaseAndIsDeletedFalse(String promoCode);
+    public boolean existsByPromoCodeIgnoreCaseAndIdNotAndIsDeletedFalse(String promoCode, Long id);
+
     @Query("""
             SELECT DISTINCT p
             FROM Promo p
             WHERE p.status = :status
                 AND p.applyType = :applyType
-                AND :now BETWEEN p.startDate and p.endDate
+                AND p.isActive = true
+                AND p.isDeleted = false
+                AND :now BETWEEN p.startDate AND p.endDate
             ORDER BY p.priority DESC, p.id ASC
-            """)
+        """)
     public List<Promo> findActivePromos(@Param("status") PromoStatus status, @Param("applyType") PromoApplyType applyType, @Param("now") LocalDateTime now);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT p FROM Promo p WHERE p.id = :id")
+    @Query("""
+            SELECT p
+            FROM Promo p
+            WHERE p.id = :id
+            AND p.isDeleted = false
+        """)
     public Optional<Promo> findByIdForUpdate(@Param("id") Long id);
 
 }

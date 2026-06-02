@@ -26,7 +26,9 @@ public class ProductResponse {
     private Long stock;
     private Long minStock;
     private Boolean isActive;
-    private Timestamp createdAt;
     private String createdBy;
+    private Timestamp createdAt;
+    private String updatedBy;
+    private Timestamp updatedAt;
 
 }

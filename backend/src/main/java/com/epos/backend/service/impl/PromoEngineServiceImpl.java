@@ -165,7 +165,7 @@ public class PromoEngineServiceImpl extends Services implements PromoEngineServi
             return buildDataNoPromo();
         }
 
-        Promo data = promoRepository.findByPromoCodeAndStatus(promoCode, PromoStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Kode promo tidak ditemukan atau tidak aktif"));
+        Promo data = promoRepository.findByPromoCodeAndStatusAndIsDeletedFalse(promoCode, PromoStatus.ACTIVE).orElseThrow(() -> new EntityNotFoundException("Kode promo tidak ditemukan atau tidak aktif"));
         LocalDateTime now = LocalDateTime.now();
 
         if (now.isBefore(data.getStartDate()) || now.isAfter(data.getEndDate())) {

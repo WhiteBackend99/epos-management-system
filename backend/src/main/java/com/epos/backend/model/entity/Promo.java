@@ -1,5 +1,6 @@
 package com.epos.backend.model.entity;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,50 +42,67 @@ public class Promo extends BaseEntity {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "promo_no")
+    @Column(name = "promo_no", nullable = false, unique = true)
     private String promoNo;
 
-    @Column(name = "promo_name")
+    @Column(name = "promo_name", nullable = false)
     private String promoName;
 
     @Column(name = "promo_code")
     private String promoCode;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "apply_type")
+    @Column(name = "apply_type", nullable = false)
     private PromoApplyType applyType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "promo_type")
+    @Column(name = "promo_type", nullable = false)
     private PromoType promoType;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private PromoStatus status;
 
-    @Column(name = "start_date")
+    @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate;
 
-    @Column(name = "end_Date")
+    @Column(name = "end_date", nullable = false)
     private LocalDateTime endDate;
 
-    @Column(name = "priority")
-    private Long priority;
+    @Builder.Default
+    @Column(name = "priority", nullable = false)
+    private Long priority = 0L;
 
-    @Column(name = "stackable")
-    private Boolean stackable;
+    @Builder.Default
+    @Column(name = "stackable", nullable = false)
+    private Boolean stackable = false;
 
     @Column(name = "max_usage")
     private Long maxUsage;
 
-    @Column(name = "current_usage")
-    private Long currentUsage;
+    @Builder.Default
+    @Column(name = "current_usage", nullable = false)
+    private Long currentUsage = 0L;
 
     @Column(name = "max_usage_per_customer")
     private Long maxUsagePerCustomer;
 
     @Column(name = "description")
     private String description;
+
+    @Builder.Default
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
+
+    @Builder.Default
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_by")
+    private String deletedBy;
+
+    @Column(name = "deleted_at")
+    private Timestamp deletedAt;
 
     @Builder.Default
     @OneToMany(mappedBy = "promo", cascade = CascadeType.ALL, orphanRemoval = true)

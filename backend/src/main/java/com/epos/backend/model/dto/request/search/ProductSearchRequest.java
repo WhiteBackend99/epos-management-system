@@ -1,5 +1,7 @@
 package com.epos.backend.model.dto.request.search;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,15 +11,18 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SupplierSearchRequest {
+public class ProductSearchRequest {
 
     private String keyword;
-    private String supplierCode;
+    private String sku;
+    private String barcode;
     private String name;
-    private String phone;
-    private String email;
-    private String picName;
+    private Long categoryId;
     private Boolean isActive;
+    private BigDecimal minSellingPrice;
+    private BigDecimal maxSellingPrice;
+    private Long minStock;
+    private Long maxStock;
 
     @Builder.Default
     private int page = 0;

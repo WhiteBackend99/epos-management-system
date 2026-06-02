@@ -19,6 +19,10 @@ public class ParseUtil {
         return hasText(value) ? value.trim().toLowerCase() : null;
     }
 
+    public static String trimToNullUpper(String value) {
+        return hasText(value) ? value.trim().toUpperCase() : null;
+    }
+
     public static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
     }

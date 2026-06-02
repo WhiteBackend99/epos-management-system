@@ -3,11 +3,14 @@ package com.epos.backend.service.impl;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import com.epos.backend.exception.ConflictException;
+import com.epos.backend.exception.NotFoundException;
 import com.epos.backend.model.dto.request.ProductRequest;
+import com.epos.backend.model.dto.request.search.ProductSearchRequest;
 import com.epos.backend.model.dto.response.ProductResponse;
 import com.epos.backend.model.entity.Category;
 import com.epos.backend.model.entity.Product;
@@ -15,7 +18,7 @@ import com.epos.backend.repository.CategoryRepository;
 import com.epos.backend.repository.ProductRepository;
 import com.epos.backend.service.ProductService;
 import com.epos.backend.specification.ProductSpecification;
-import com.epos.backend.util.GeneratorUtil;
+import com.epos.backend.util.ParseUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -26,94 +29,143 @@ public class ProductServiceImpl extends Services implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
+    private void validateCreate(ProductRequest request) {
+        if (productRepository.existsByNameIgnoreCaseAndIsDeletedFalse(request.getName().trim())) {
+            throw new ConflictException("Produk dengan nama tersebut sudah ada");
+        }
+
+        if (StringUtils.hasText(request.getBarcode()) && productRepository.existsByBarcodeIgnoreCaseAndIsDeletedFalse(request.getBarcode().trim())) {
+            throw new ConflictException("Barcode produk sudah digunakan");
+        }
+    }
+
+    private void validateUpdate(Long id, ProductRequest request) {
+        if (productRepository.existsByNameIgnoreCaseAndIdNotAndIsDeletedFalse(request.getName().trim(), id)) {
+            throw new ConflictException("Produk dengan nama tersebut sudah ada");
+        }
+
+        if (StringUtils.hasText(request.getBarcode()) && productRepository.existsByBarcodeIgnoreCaseAndIdNotAndIsDeletedFalse(request.getBarcode().trim(), id)) {
+            throw new ConflictException("Barcode produk sudah digunakan");
+        }
+    }
+
     private ProductResponse buildEntityToResponse(Product data) {
         return ProductResponse.builder()
-            .id(data.getId())
-            .categoryId(data.getCategory().getId())
-            .categoryName(data.getCategory().getName())
-            .sku(data.getSku())
-            .barcode(data.getBarcode())
-            .name(data.getName())
-            .description(data.getDescription())
-            .purchasePrice(data.getPurchasePrice())
-            .sellingPrice(data.getSellingPrice())
-            .stock(data.getStock())
-            .minStock(data.getMinStock())
-            .isActive(data.getIsActive())
-            .createdAt(data.getCreatedAt())
-            .createdBy(data.getCreatedBy())
+                .id(data.getId())
+                .categoryId(data.getCategory().getId())
+                .categoryName(data.getCategory().getName())
+                .sku(data.getSku())
+                .barcode(data.getBarcode())
+                .name(data.getName())
+                .description(data.getDescription())
+                .purchasePrice(data.getPurchasePrice())
+                .sellingPrice(data.getSellingPrice())
+                .stock(data.getStock())
+                .minStock(data.getMinStock())
+                .isActive(data.getIsActive())
+                .createdAt(data.getCreatedAt())
+                .createdBy(data.getCreatedBy())
+                .updatedAt(data.getUpdatedAt())
+                .updatedBy(data.getUpdatedBy())
             .build();
     }
 
+    @Transactional
     @Override
     public ProductResponse createProduct(ProductRequest request) {
-        if (productRepository.existsByNameAndIsDeletedFalse(request.getName())) {
-            throw new RuntimeException("Produk dengan nama tersebut sudah ada");
-        }
-        
-        Category dataCategory = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
+        validateCreate(request);
+
+        Category dataCategory = categoryRepository.findByIdAndIsDeletedFalse(request.getCategoryId()).orElseThrow(() -> new NotFoundException("Kategori tidak ditemukan"));
+
         Product newData = Product.builder()
-            .category(dataCategory)
-            .sku(GeneratorUtil.generateSku())
-            .barcode(request.getBarcode())
-            .name(request.getName())
-            .description(request.getDescription())
-            .purchasePrice(request.getPurchasePrice())
-            .sellingPrice(request.getSellingPrice())
-            .stock(request.getStock())
-            .minStock(request.getMinStock())
-            .isActive(request.getIsActive() != null ? request.getIsActive() : null)
-            .isDeleted(false)
-            .createdAt(now())
-            .createdBy(getCurrentUsername())
+                .category(dataCategory)
+                .sku(automationGeneratorServices.generateProductCode())
+                .barcode(ParseUtil.trimToNull(request.getBarcode()))
+                .name(request.getName().trim())
+                .description(ParseUtil.trimToNull(request.getDescription()))
+                .purchasePrice(request.getPurchasePrice())
+                .sellingPrice(request.getSellingPrice())
+                .stock(request.getStock())
+                .minStock(request.getMinStock())
+                .isActive(request.getIsActive() == null ? true : request.getIsActive())
+                .isDeleted(false)
+                .createdAt(now())
+                .createdBy(getCurrentUsername())
             .build();
 
-        productRepository.save(newData);
-        return buildEntityToResponse(newData);
+        return buildEntityToResponse(productRepository.save(newData));
     }
 
+    @Transactional
     @Override
     public ProductResponse updateProduct(Long id, ProductRequest request) {
-        Product data = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produk tidak ditemukan"));
-        Category dataCategory = categoryRepository.findById(request.getCategoryId()).orElseThrow(() -> new RuntimeException("Kategori tidak ditemukan"));
+        Product data = productRepository.findActiveProductForUpdate(id).orElseThrow(() -> new NotFoundException("Produk tidak ditemukan"));
+
+        validateUpdate(id, request);
+
+        Category dataCategory = categoryRepository.findByIdAndIsDeletedFalse(request.getCategoryId()).orElseThrow(() -> new NotFoundException("Kategori tidak ditemukan"));
 
         data.setCategory(dataCategory);
-        data.setBarcode(request.getBarcode());
-        data.setName(request.getName());
-        data.setDescription(request.getDescription());
+        data.setBarcode(ParseUtil.trimToNull(request.getBarcode()));
+        data.setName(request.getName().trim());
+        data.setDescription(ParseUtil.trimToNull(request.getDescription()));
         data.setPurchasePrice(request.getPurchasePrice());
         data.setSellingPrice(request.getSellingPrice());
         data.setStock(request.getStock());
         data.setMinStock(request.getMinStock());
-        data.setIsActive(request.getIsActive());
+        data.setIsActive(request.getIsActive() == null ? data.getIsActive() : request.getIsActive());
         data.setUpdatedAt(now());
         data.setUpdatedBy(getCurrentUsername());
 
-        productRepository.save(data);
-
-        return buildEntityToResponse(data);
+        return buildEntityToResponse(productRepository.save(data));
     }
 
+    @Transactional(readOnly = true)
     @Override
     public ProductResponse getProductById(Long id) {
-        Product data = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produk tidak ditemukan"));
+        Product data = productRepository.findByIdAndIsDeletedFalse(id).orElseThrow(() -> new NotFoundException("Produk tidak ditemukan"));
         return buildEntityToResponse(data);
     }
 
+    @Transactional
     @Override
-    public Page<ProductResponse> getAllProducts(int page, int size, String search, Boolean isActive) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-        Specification<Product> specification = Specification.where(ProductSpecification.notDeleted().and(ProductSpecification.search(search)).and(ProductSpecification.active(isActive)));
-        return productRepository.findAll(specification, pageable).map(this::buildEntityToResponse);
-    }
-
-    @Override
-    public void deleteProduct(Long id) {
-        Product data = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Produk tidak ditemukan"));
+    public ProductResponse deleteProduct(Long id) {
+        Product data = productRepository.findActiveProductForUpdate(id).orElseThrow(() -> new NotFoundException("Produk tidak ditemukan"));
         data.setIsDeleted(true);
+        data.setIsActive(false);
         data.setDeletedAt(now());
         data.setDeletedBy(getCurrentUsername());
-        productRepository.save(data);
+        data.setUpdatedAt(now());
+        data.setUpdatedBy(getCurrentUsername());
+        return buildEntityToResponse(productRepository.save(data));
     }
 
+    @Transactional
+    @Override
+    public ProductResponse activateProduct(Long id) {
+        Product data = productRepository.findActiveProductForUpdate(id).orElseThrow(() -> new NotFoundException("Produk tidak ditemukan"));
+        data.setIsActive(true);
+        data.setUpdatedAt(now());
+        data.setUpdatedBy(getCurrentUsername());
+        return buildEntityToResponse(productRepository.save(data));
+    }
+
+    @Transactional
+    @Override
+    public ProductResponse deactivateProduct(Long id) {
+        Product data = productRepository.findActiveProductForUpdate(id).orElseThrow(() -> new NotFoundException("Produk tidak ditemukan"));
+        data.setIsActive(false);
+        data.setUpdatedAt(now());
+        data.setUpdatedBy(getCurrentUsername());
+        return buildEntityToResponse(productRepository.save(data));
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Page<ProductResponse> searchData(ProductSearchRequest request) {
+        ProductSearchRequest searchRequest = request == null ? new ProductSearchRequest() : request;
+        Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize());
+        return productRepository.findAll(ProductSpecification.search(searchRequest), pageable).map(this::buildEntityToResponse);
+    }
+    
 }

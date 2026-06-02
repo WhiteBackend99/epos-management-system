@@ -5,8 +5,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.format.annotation.DateTimeFormat;
-
 import com.epos.backend.enums.PromoApplyType;
 import com.epos.backend.enums.PromoOperator;
 import com.epos.backend.enums.PromoRewardType;
@@ -23,25 +21,22 @@ import lombok.Data;
 @Data
 public class CreatePromoRequest {
 
-    @NotBlank
+    @NotBlank(message = "Nama promo wajib diisi")
     private String promoName;
 
-    private String promoCode;
-
-    @NotNull
+    @NotNull(message = "Tipe apply promo wajib diisi")
     private PromoApplyType applyType;
 
-    @NotNull
+   @NotNull(message = "Tipe promo wajib diisi")
     private PromoType promoType;
 
-    @NotNull
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    @NotNull(message = "Tanggal mulai promo wajib diisi")
     private LocalDateTime startDate;
 
-    @NotNull
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    @NotNull(message = "Tanggal akhir promo wajib diisi")
     private LocalDateTime endDate;
 
+    private String promoCode;
     private Long priority = 0l;
     private Boolean stackable = false;
     private Long maxUsage;
@@ -49,33 +44,35 @@ public class CreatePromoRequest {
     private String description;
 
     @Valid
-    @NotEmpty
+    @NotEmpty(message = "Rule promo wajib diisi")
     private List<PromoRuleRequest> rules;
 
     @Valid
-    @NotEmpty
+    @NotEmpty(message = "Reward promo wajib diisi")
     private List<PromoRewardRequest> rewards;
     
     @Data
     public static class PromoRuleRequest {
-        @NotNull
+        
+        @NotNull(message = "Tipe rule wajib diisi")
         private PromoRuleType ruleType;
 
-        @NotNull
+        @NotNull(message = "Operator rule wajib diisi")
         private PromoOperator operator;
 
-        @NotNull
+        @NotNull(message = "Nilai rule wajib diisi")
         private Map<String, Object> ruleValue;
+
     }
 
     @Data
     public static class PromoRewardRequest {
         
-        @NotNull
+        @NotNull(message = "Tipe reward wajib diisi")
         private PromoRewardType rewardType;
 
-        @NotNull
-        @DecimalMin("0.01")
+        @NotNull(message = "Nilai reward wajib diisi")
+        @DecimalMin(value = "0.01", message = "Nilai reward minimal 0.01")
         private BigDecimal rewardValue;
 
         private BigDecimal maxDiscountAmount;

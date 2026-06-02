@@ -21,9 +21,6 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long>, JpaSp
     public boolean existsByPhoneAndIdNotAndIsDeletedFalse(String phone, Long id);
     public boolean existsByEmailIgnoreCaseAndIdNotAndIsDeletedFalse(String email, Long id);
     public Optional<Supplier> findByIdAndIsDeletedFalse(Long id);
-    
-    @Query(value = "select nextval('seq_supplier_code')", nativeQuery = true)
-    public Long getNextSupplierCodeSequence();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -33,5 +30,14 @@ public interface SupplierRepository extends JpaRepository<Supplier, Long>, JpaSp
             AND s.isDeleted = false
         """)
     public Optional<Supplier> findByIdForUpdate(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT s
+            FROM Supplier s
+            WHERE s.supplierCode = :supplierCode
+            AND s.isDeleted = false
+        """)
+    public Optional<Supplier> findBySupplierCodeForUpdate(@Param("supplierCode") String supplierCode);
 
 }
